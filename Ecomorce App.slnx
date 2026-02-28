@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="DataAccess/DataAccess.csproj" />
+  <Project Path="Task/Task.csproj" />
+</Solution>
