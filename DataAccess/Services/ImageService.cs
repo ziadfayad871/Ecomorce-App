@@ -13,7 +13,7 @@ namespace DataAccess.Services
 
         public async Task<string> SaveProductImageAsync(IFormFile file)
         {
-            var root = Path.Combine(_env.WebRootPath, "uploads", "products");
+            var root = Path.Combine(_env.WebRootPath, "uploads", "cards");
             Directory.CreateDirectory(root);
 
             var ext = Path.GetExtension(file.FileName);
@@ -23,7 +23,7 @@ namespace DataAccess.Services
             using var fs = new FileStream(full, FileMode.Create);
             await file.CopyToAsync(fs);
 
-            return $"/uploads/products/{name}";
+            return $"/uploads/cards/{name}";
         }
     }
 }

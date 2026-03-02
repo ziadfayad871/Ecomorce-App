@@ -1,5 +1,5 @@
 ﻿@{
-    var pageTitle = ViewData["Title"] as string ?? "لوحة الإدارة";
+    var pageTitle = ViewData["Title"] as string ?? "لوحة إدارة متجر الملابس";
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="h-full">
@@ -44,23 +44,32 @@
         <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur">
             <div class="flex h-20 items-center justify-between gap-3">
                 <div>
-                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-xl font-extrabold text-admin-900">لوحة إدارة المتجر</a>
-                    <p class="text-xs font-semibold text-slate-500">تحكم كامل بالمنتجات والتصنيفات</p>
+                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-xl font-extrabold text-admin-900">لوحة إدارة متجر الملابس</a>
+                    <p class="text-xs font-semibold text-slate-500">إدارة التصنيفات والمنتجات والمستخدمين</p>
                 </div>
 
                 <nav class="flex flex-wrap items-center gap-2 text-sm font-bold">
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">الرئيسية</a>
-                        <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">التصنيفات</a>
-                        <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">المنتجات</a>
-                        <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post">
+
+                        <details class="relative">
+                            <summary class="list-none cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">إدارة المتجر ▾</summary>
+                            <div class="absolute left-0 z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                                <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="block rounded-lg px-3 py-2 text-slate-700 transition hover:bg-admin-50 hover:text-admin-700">إدارة التصنيفات</a>
+                                <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="mt-1 block rounded-lg px-3 py-2 text-slate-700 transition hover:bg-admin-50 hover:text-admin-700">إدارة المنتجات</a>
+                                <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="mt-1 block rounded-lg px-3 py-2 text-slate-700 transition hover:bg-admin-50 hover:text-admin-700">إدارة المستخدمين</a>
+                            </div>
+                        </details>
+
+                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
                             <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-white shadow-sm transition hover:bg-rose-700">تسجيل الخروج</button>
                         </form>
                     }
                     else
                     {
-                        <a asp-area="Admin" asp-controller="Account" asp-action="Login" class="rounded-xl bg-admin-700 px-4 py-2 text-white shadow-sm transition hover:bg-admin-900">دخول المدير</a>
+                        <a asp-area="" asp-controller="Account" asp-action="Login" class="rounded-xl bg-admin-700 px-4 py-2 text-white shadow-sm transition hover:bg-admin-900">دخول المدير</a>
                     }
                 </nav>
             </div>
@@ -70,8 +79,42 @@
             @RenderBody()
         </main>
 
-        <footer class="border-t border-slate-200/80 py-6 text-center text-sm text-slate-500">
-            <p>لوحة الإدارة &copy; @DateTime.Now.Year</p>
+        <footer class="mt-8 border-t border-slate-200/80 bg-white/70 px-4 py-8 backdrop-blur sm:px-6 lg:px-8">
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                    <p class="text-lg font-extrabold text-admin-900">لوحة الإدارة</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">تحكم كامل في المنتجات والتصنيفات والمستخدمين من مكان واحد.</p>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">إدارة المتجر</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="block transition hover:text-admin-700">المنتجات</a>
+                        <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="block transition hover:text-admin-700">التصنيفات</a>
+                        <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="block transition hover:text-admin-700">المستخدمون</a>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">الإحصائيات</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>متابعة تحديثات المنتجات لحظيا</p>
+                        <p>تنظيم الكروت والصور داخل المتجر</p>
+                        <p>تجربة إدارة سلسة وسريعة</p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">الدعم التقني</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>Admin Support Center</p>
+                        <p>admin-support@cloth-store.com</p>
+                        <p>+20 100 111 2222</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500">
+                <p>لوحة إدارة متجر الملابس &copy; @DateTime.Now.Year</p>
+                <p>Operational Panel for Product & User Management</p>
+            </div>
         </footer>
     </div>
 

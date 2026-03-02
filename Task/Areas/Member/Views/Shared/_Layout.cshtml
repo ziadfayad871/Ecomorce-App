@@ -1,5 +1,11 @@
-﻿@{
-    var pageTitle = ViewData["Title"] as string ?? "بوابة الأعضاء";
+﻿@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Http
+@{
+    var pageTitle = ViewData["Title"] as string ?? "بوابة متجر الملابس";
+    var cartCount = Context.Session.GetInt32("CartCount") ?? 0;
+    var memberAuth = await Context.AuthenticateAsync("MemberCookie");
+    var isMemberAuthenticated = memberAuth.Succeeded;
+    var memberName = memberAuth.Principal?.Identity?.Name;
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="h-full">
@@ -44,22 +50,25 @@
         <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur">
             <div class="flex h-20 items-center justify-between gap-3">
                 <div>
-                    <a asp-area="Member" asp-controller="Home" asp-action="Index" class="text-xl font-extrabold text-brand-900">متجر إلكتروني</a>
-                    <p class="text-xs font-semibold text-slate-500">بوابة الأعضاء</p>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Index" class="text-xl font-extrabold text-brand-900">متجر الملابس</a>
+                    <p class="text-xs font-semibold text-slate-500">تسوق سريع وآمن</p>
                 </div>
 
                 <nav class="flex flex-wrap items-center gap-2 text-sm font-bold">
-                    @if (User.Identity?.IsAuthenticated == true)
+                    <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">العربة (@cartCount)</a>
+
+                    @if (isMemberAuthenticated)
                     {
-                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">لوحة العضو</a>
-                        <form asp-area="Member" asp-controller="Account" asp-action="Logout" method="post">
+                        <span class="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">حساب الميمبر: @(string.IsNullOrWhiteSpace(memberName) ? "Member" : memberName)</span>
+                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">الرئيسية</a>
+                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
                             <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-white shadow-sm transition hover:bg-rose-700">تسجيل الخروج</button>
                         </form>
                     }
                     else
                     {
-                        <a asp-area="Member" asp-controller="Account" asp-action="Login" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">تسجيل الدخول</a>
-                        <a asp-area="Member" asp-controller="Account" asp-action="Register" class="rounded-xl bg-brand-700 px-4 py-2 text-white shadow-sm transition hover:bg-brand-900">إنشاء حساب</a>
+                        <a asp-area="" asp-controller="Account" asp-action="Login" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">تسجيل الدخول</a>
                     }
                 </nav>
             </div>
@@ -69,8 +78,42 @@
             @RenderBody()
         </main>
 
-        <footer class="border-t border-slate-200/80 py-6 text-center text-sm text-slate-500">
-            <p>جميع الحقوق محفوظة &copy; @DateTime.Now.Year</p>
+        <footer class="mt-8 border-t border-slate-200/80 bg-white/70 px-4 py-8 backdrop-blur sm:px-6 lg:px-8">
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                    <p class="text-lg font-extrabold text-brand-900">متجر الملابس</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">منصة تسوق ملابس حديثة مع تجربة شراء سريعة وآمنة.</p>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">روابط سريعة</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="block transition hover:text-brand-700">الرئيسية</a>
+                        <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="block transition hover:text-brand-700">عربة التسوق</a>
+                        <a asp-area="" asp-controller="Account" asp-action="Login" class="block transition hover:text-brand-700">تسجيل الدخول</a>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">خدمات المتجر</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>تصفح حسب الأقسام بسهولة</p>
+                        <p>عربة تسوق ديناميكية وتحديث فوري</p>
+                        <p>منتجات محدثة من لوحة الإدارة</p>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-sm font-extrabold text-slate-900">الدعم</p>
+                    <div class="mt-2 space-y-1 text-sm text-slate-600">
+                        <p>السبت - الخميس: 9 ص - 9 م</p>
+                        <p>support@cloth-store.com</p>
+                        <p>+20 100 000 0000</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500">
+                <p>متجر الملابس &copy; @DateTime.Now.Year. جميع الحقوق محفوظة.</p>
+                <p>Designed for Modern Fashion Shopping</p>
+            </div>
         </footer>
     </div>
 
@@ -79,3 +122,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

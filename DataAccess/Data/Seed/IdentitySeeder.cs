@@ -27,9 +27,22 @@ namespace DataAccess.Data.Seed
                     FullName = "System Admin"
                 };
 
-                
-                await userMgr.CreateAsync(admin, "Admin@12345");
-                await userMgr.AddToRoleAsync(admin, "Admin");
+                var createRes = await userMgr.CreateAsync(admin, "Admin@12345");
+                if (!createRes.Succeeded)
+                {
+                    var errs = string.Join(" | ", createRes.Errors.Select(e => e.Description));
+                    throw new InvalidOperationException($"Admin seed create failed: {errs}");
+                }
+            }
+
+            if (!await userMgr.IsInRoleAsync(admin, "Admin"))
+            {
+                var roleRes = await userMgr.AddToRoleAsync(admin, "Admin");
+                if (!roleRes.Succeeded)
+                {
+                    var errs = string.Join(" | ", roleRes.Errors.Select(e => e.Description));
+                    throw new InvalidOperationException($"Admin seed role assignment failed: {errs}");
+                }
             }
         }
     }

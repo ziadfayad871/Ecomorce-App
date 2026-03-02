@@ -1,8 +1,8 @@
 ﻿using DataAccess.Models.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Task.Areas.Admin.ViewModels;
-
 
 namespace Task.Areas.Admin.Controllers
 {
@@ -19,7 +19,8 @@ namespace Task.Areas.Admin.Controllers
         }
 
         [HttpGet]
-        public IActionResult Login() => View();
+        public IActionResult Login(string? returnUrl = null) =>
+            RedirectToAction("Login", "Account", new { area = "", returnUrl });
 
         [HttpPost]
         public async Task<IActionResult> Login(AdminLoginVm vm)
@@ -49,7 +50,8 @@ namespace Task.Areas.Admin.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInMgr.SignOutAsync();
-            return RedirectToAction("Login", new { area = "Admin" });
+            await HttpContext.SignOutAsync("MemberCookie");
+            return RedirectToAction("Login", "Account", new { area = "" });
         }
     }
 }
