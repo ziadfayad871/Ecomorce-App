@@ -1,52 +1,71 @@
 using DataAccess.Data;
-using DataAccess.Models;
+using DataAccess.Data.Seed;
+using DataAccess.Models.Identity;
+using DataAccess.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Task.Contracts;
+using Task.Repositories;
+using YourApp.Repositories;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Register EF DbContexts
-builder.Services.AddDbContext<AdminDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddDbContext<UsersDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>(opt =>
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity using Admin user type
-builder.Services.AddIdentity<Admin, IdentityRole>(options =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opt =>
+{
+    opt.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+
+builder.Services.AddAuthentication()
+    .AddCookie("MemberCookie", opt =>
     {
-    })
-    .AddEntityFrameworkStores<AdminDbContext>()
-    .AddDefaultTokenProviders();
+        opt.LoginPath = "/Member/Account/Login";
+        opt.AccessDeniedPath = "/Member/Account/Login";
+    });
 
-builder.Services.AddAuthorization();
+// Repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+
+// Services
+builder.Services.AddScoped<MemberAuthService>();
+builder.Services.AddScoped<ImageService>();
 
 var app = builder.Build();
 
-// Seed roles and admin user
-await DataAccess.Data.SeedData.InitializeAsync(app.Services);
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hs                        ts.
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/", context =>
+{
+    context.Response.Redirect("/Member/Account/Login");
+    return System.Threading.Tasks.Task.CompletedTask;
+});
 
 app.MapControllerRoute(
-    name: "areas",
-    pattern: "{area:User}/{controller=Home}/{action=Index}/{id?}");  
+    name: "Areas",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Seed Admin
+using (var scope = app.Services.CreateScope())
+{
+    await IdentitySeeder.SeedAsync(scope.ServiceProvider);
+}
 
 app.Run();

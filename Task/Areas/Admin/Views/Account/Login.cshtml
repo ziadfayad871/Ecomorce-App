@@ -1,0 +1,39 @@
+﻿@model global::Task.Areas.Admin.ViewModels.AdminLoginVm
+@{
+    ViewData["Title"] = "دخول الإدارة";
+}
+
+<section class="mx-auto max-w-xl">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <p class="inline-flex items-center rounded-full bg-admin-50 px-3 py-1 text-xs font-bold text-admin-700">للإدارة فقط</p>
+        <h2 class="mt-4 text-2xl font-extrabold text-slate-900">تسجيل دخول المدير</h2>
+        <p class="mt-2 text-sm text-slate-500">أدخل بيانات حساب الإدارة للمتابعة إلى لوحة التحكم.</p>
+
+        <form asp-area="Admin" asp-controller="Account" asp-action="Login" method="post" class="mt-6 space-y-4">
+            <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+            <div>
+                <label asp-for="Email" class="mb-1 block text-sm font-bold text-slate-700">البريد الإلكتروني</label>
+                <input asp-for="Email" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="admin@example.com" />
+                <span asp-validation-for="Email" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+            </div>
+
+            <div>
+                <label asp-for="Password" class="mb-1 block text-sm font-bold text-slate-700">كلمة المرور</label>
+                <input asp-for="Password" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="••••••••" />
+                <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+            </div>
+
+            <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600">
+                <input asp-for="RememberMe" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-admin-700 focus:ring-admin-500" />
+                تذكرني
+            </label>
+
+            <button type="submit" class="w-full rounded-xl bg-admin-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-admin-900">دخول لوحة الإدارة</button>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,59 @@
+﻿@model global::Task.Areas.Admin.ViewModels.ProductFormVm
+@{
+    ViewData["Title"] = "إضافة منتج";
+    var cats = ViewBag.Categories as List<DataAccess.Models.Entities.Category> ?? new();
+}
+
+<section class="mx-auto max-w-3xl">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h1 class="text-2xl font-extrabold text-slate-900">إضافة منتج جديد</h1>
+
+        <form asp-area="Admin" asp-controller="Products" asp-action="Create" method="post" enctype="multipart/form-data" class="mt-6 space-y-4">
+            <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+            <div>
+                <label asp-for="Name" class="mb-1 block text-sm font-bold text-slate-700">اسم المنتج</label>
+                <input asp-for="Name" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="مثال: سماعات لاسلكية" />
+                <span asp-validation-for="Name" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+            </div>
+
+            <div>
+                <label asp-for="Price" class="mb-1 block text-sm font-bold text-slate-700">السعر</label>
+                <input asp-for="Price" type="number" step="0.01" min="0" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="0.00" />
+                <span asp-validation-for="Price" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+            </div>
+
+            <div>
+                <label asp-for="CategoryId" class="mb-1 block text-sm font-bold text-slate-700">التصنيف</label>
+                <select asp-for="CategoryId" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100">
+                    @if (cats.Count == 0)
+                    {
+                        <option value="">لا توجد تصنيفات</option>
+                    }
+                    else
+                    {
+                        @foreach (var c in cats)
+                        {
+                            <option value="@c.Id">@c.Name</option>
+                        }
+                    }
+                </select>
+                <span asp-validation-for="CategoryId" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+            </div>
+
+            <div>
+                <label asp-for="Image" class="mb-1 block text-sm font-bold text-slate-700">صورة المنتج</label>
+                <input asp-for="Image" type="file" class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm file:ml-3 file:rounded-lg file:border-0 file:bg-admin-700 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-admin-900" />
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">حفظ المنتج</button>
+                <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">رجوع</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

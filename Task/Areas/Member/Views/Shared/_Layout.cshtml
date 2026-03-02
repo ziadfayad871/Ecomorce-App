@@ -1,5 +1,5 @@
 ﻿@{
-    var pageTitle = ViewData["Title"] as string ?? "لوحة الإدارة";
+    var pageTitle = ViewData["Title"] as string ?? "بوابة الأعضاء";
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="h-full">
@@ -16,12 +16,12 @@
                         sans: ["Cairo", "sans-serif"]
                     },
                     colors: {
-                        admin: {
-                            50: "#ecfeff",
-                            100: "#cffafe",
-                            500: "#06b6d4",
-                            700: "#0e7490",
-                            900: "#164e63"
+                        brand: {
+                            50: "#f0f9ff",
+                            100: "#e0f2fe",
+                            500: "#0ea5e9",
+                            700: "#0369a1",
+                            900: "#0c4a6e"
                         }
                     }
                 }
@@ -36,31 +36,30 @@
 </head>
 <body class="min-h-full bg-slate-100 font-sans text-slate-800 antialiased">
     <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-28 right-10 h-96 w-96 rounded-full bg-admin-100 blur-3xl"></div>
-        <div class="absolute bottom-0 left-0 h-72 w-72 -translate-x-20 translate-y-20 rounded-full bg-cyan-200/70 blur-3xl"></div>
+        <div class="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-100 blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 h-64 w-64 translate-x-20 translate-y-20 rounded-full bg-sky-200/70 blur-3xl"></div>
     </div>
 
     <div class="mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
         <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur">
             <div class="flex h-20 items-center justify-between gap-3">
                 <div>
-                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-xl font-extrabold text-admin-900">لوحة إدارة المتجر</a>
-                    <p class="text-xs font-semibold text-slate-500">تحكم كامل بالمنتجات والتصنيفات</p>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Index" class="text-xl font-extrabold text-brand-900">متجر إلكتروني</a>
+                    <p class="text-xs font-semibold text-slate-500">بوابة الأعضاء</p>
                 </div>
 
                 <nav class="flex flex-wrap items-center gap-2 text-sm font-bold">
                     @if (User.Identity?.IsAuthenticated == true)
                     {
-                        <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">الرئيسية</a>
-                        <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">التصنيفات</a>
-                        <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-admin-500 hover:text-admin-700">المنتجات</a>
-                        <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post">
+                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">لوحة العضو</a>
+                        <form asp-area="Member" asp-controller="Account" asp-action="Logout" method="post">
                             <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-white shadow-sm transition hover:bg-rose-700">تسجيل الخروج</button>
                         </form>
                     }
                     else
                     {
-                        <a asp-area="Admin" asp-controller="Account" asp-action="Login" class="rounded-xl bg-admin-700 px-4 py-2 text-white shadow-sm transition hover:bg-admin-900">دخول المدير</a>
+                        <a asp-area="Member" asp-controller="Account" asp-action="Login" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">تسجيل الدخول</a>
+                        <a asp-area="Member" asp-controller="Account" asp-action="Register" class="rounded-xl bg-brand-700 px-4 py-2 text-white shadow-sm transition hover:bg-brand-900">إنشاء حساب</a>
                     }
                 </nav>
             </div>
@@ -71,7 +70,7 @@
         </main>
 
         <footer class="border-t border-slate-200/80 py-6 text-center text-sm text-slate-500">
-            <p>لوحة الإدارة &copy; @DateTime.Now.Year</p>
+            <p>جميع الحقوق محفوظة &copy; @DateTime.Now.Year</p>
         </footer>
     </div>
 
