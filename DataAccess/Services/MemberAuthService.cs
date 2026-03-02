@@ -42,5 +42,49 @@ namespace DataAccess.Services
 
             return ManualHasher.Verify(password, member.PasswordHash) ? member : null;
         }
+
+        public async Task<Member?> FindByEmailAsync(string email, bool activeOnly = false)
+        {
+            email = email.Trim().ToLower();
+            var query = _db.Members.AsQueryable();
+
+            if (activeOnly)
+            {
+                query = query.Where(m => m.IsActive);
+            }
+
+            return await query.FirstOrDefaultAsync(m => m.Email == email);
+        }
+
+        public async Task<Member> RegisterExternalAsync(string fullName, string email)
+        {
+            email = email.Trim().ToLower();
+            var existing = await _db.Members.FirstOrDefaultAsync(m => m.Email == email);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var displayName = string.IsNullOrWhiteSpace(fullName)
+                ? email.Split('@')[0]
+                : fullName.Trim();
+
+            if (displayName.Length > 120)
+            {
+                displayName = displayName[..120];
+            }
+
+            var member = new Member
+            {
+                FullName = displayName,
+                Email = email,
+                PasswordHash = ManualHasher.Hash($"ext-{Guid.NewGuid():N}"),
+                IsActive = true
+            };
+
+            _db.Members.Add(member);
+            await _db.SaveChangesAsync();
+            return member;
+        }
     }
 }

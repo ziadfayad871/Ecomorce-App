@@ -29,7 +29,20 @@
 
                 <div>
                     <label asp-for="Password" class="mb-1 block text-sm font-bold text-slate-700">كلمة المرور</label>
-                    <input asp-for="Password" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100" placeholder="••••••••" />
+                    <div class="relative">
+                        <input asp-for="Password" id="MemberLoginPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100" placeholder="••••••••" />
+                        <button type="button" data-toggle-target="MemberLoginPasswordInput" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                            </svg>
+                            <svg data-eye-closed xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3l18 18" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.584 10.587a2.25 2.25 0 1 0 3.182 3.182" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.88 5.09A10.477 10.477 0 0 1 12 4.875c6.75 0 9.75 5.25 9.75 5.25a17.27 17.27 0 0 1-3.015 3.83M6.228 6.228C4.068 7.545 2.25 10.125 2.25 10.125s3 5.25 9.75 5.25a10.9 10.9 0 0 0 4.27-.835" />
+                            </svg>
+                        </button>
+                    </div>
                     <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
                 </div>
 
@@ -51,4 +64,26 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var toggles = document.querySelectorAll("[data-toggle-target]");
+            toggles.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var input = document.getElementById(btn.getAttribute("data-toggle-target"));
+                    if (!input) return;
+                    var isPassword = input.type === "password";
+                    input.type = isPassword ? "text" : "password";
+                    btn.setAttribute("aria-label", isPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+                    btn.setAttribute("aria-pressed", isPassword ? "true" : "false");
+
+                    var eyeOpen = btn.querySelector("[data-eye-open]");
+                    var eyeClosed = btn.querySelector("[data-eye-closed]");
+                    if (eyeOpen && eyeClosed) {
+                        eyeOpen.classList.toggle("hidden", isPassword);
+                        eyeClosed.classList.toggle("hidden", !isPassword);
+                    }
+                });
+            });
+        })();
+    </script>
 }

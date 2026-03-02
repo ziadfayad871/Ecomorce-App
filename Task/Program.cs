@@ -43,6 +43,16 @@ builder.Services.AddAuthentication()
     {
         opt.LoginPath = "/Account/Login";
         opt.AccessDeniedPath = "/Account/Login";
+    })
+    .AddGoogle("Google", opt =>
+    {
+        opt.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+        opt.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+    })
+    .AddMicrosoftAccount("Microsoft", opt =>
+    {
+        opt.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "";
+        opt.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
     });
 
 // Repositories
