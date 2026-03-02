@@ -8,12 +8,12 @@ namespace Task.Areas.Member.Controllers
     {
         [HttpGet]
         public IActionResult Register() =>
-            RedirectToAction("Login", "Account", new { area = "" });
+            RedirectToAction("Register", "Account", new { area = "" });
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Register(MemberRegisterVm vm) =>
-            RedirectToAction("Login", "Account", new { area = "" });
+            RedirectToAction("Register", "Account", new { area = "" });
 
         [HttpGet]
         public IActionResult Login(string? returnUrl = null) =>

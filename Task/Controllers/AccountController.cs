@@ -37,6 +37,14 @@ namespace Task.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> Register(string? returnUrl = null)
+        {
+            await PopulateExternalProvidersAsync();
+            return View(new UnifiedRegisterVm { ReturnUrl = returnUrl });
+        }
+
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(UnifiedLoginVm vm)
@@ -72,6 +80,53 @@ namespace Task.Controllers
             }
 
             ModelState.AddModelError("", "Invalid email or password.");
+            vm.Password = string.Empty;
+            await PopulateExternalProvidersAsync();
+            return View(vm);
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(UnifiedRegisterVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                await PopulateExternalProvidersAsync();
+                return View(vm);
+            }
+
+            var fullName = vm.FullName.Trim();
+            var email = vm.Email.Trim().ToLowerInvariant();
+
+            var adminUser = await _userMgr.FindByEmailAsync(email);
+            if (adminUser != null && await _userMgr.IsInRoleAsync(adminUser, "Admin"))
+            {
+                ModelState.AddModelError(nameof(vm.Email), "This email is reserved for an admin account.");
+                vm.Password = string.Empty;
+                await PopulateExternalProvidersAsync();
+                return View(vm);
+            }
+
+            try
+            {
+                var memberId = await _memberAuth.RegisterAsync(fullName, email, vm.Password);
+
+                await _signInMgr.SignOutAsync();
+                await HttpContext.SignOutAsync(MemberScheme);
+                await SignInMemberAsync(memberId, email, remember: false);
+
+                return RedirectAfterLogin(isAdmin: false, vm.ReturnUrl);
+            }
+            catch (Exception ex) when (ex.Message.Contains("Email already exists", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(vm.Email), "Email is already registered.");
+            }
+            catch
+            {
+                ModelState.AddModelError("", "Unable to create account right now.");
+            }
+
             vm.Password = string.Empty;
             await PopulateExternalProvidersAsync();
             return View(vm);

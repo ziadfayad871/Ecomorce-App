@@ -1,17 +1,18 @@
-﻿@model global::Task.ViewModels.UnifiedLoginVm
+@model global::Task.ViewModels.UnifiedRegisterVm
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
     var googleEnabled = ViewBag.GoogleEnabled as bool? ?? false;
     var microsoftEnabled = ViewBag.MicrosoftEnabled as bool? ?? false;
     var hasExternalProviders = googleEnabled || microsoftEnabled;
+    var externalReturnUrl = string.IsNullOrWhiteSpace(Model.ReturnUrl) ? "/Member/Home/Index" : Model.ReturnUrl;
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>تسجيل الدخول - Ecomorce App</title>
+    <title>إنشاء حساب - Ecomorce App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -47,27 +48,33 @@
                 <section class="hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-700 to-cyan-500 p-8 text-white md:flex md:flex-col md:justify-between">
                     <div>
                         <p class="text-xs font-bold tracking-[0.35em] text-cyan-100">WELCOME</p>
-                        <h1 class="mt-4 text-4xl font-extrabold leading-tight">تسجيل دخول موحد</h1>
+                        <h1 class="mt-4 text-4xl font-extrabold leading-tight">إنشاء حساب مستخدم</h1>
                         <p class="mt-4 text-sm leading-7 text-cyan-100">
-                            نفس الصفحة للميمبر والمدير.
-                            النظام يحدد النوع تلقائيا بناء على الحساب ويحولك للوحة المناسبة.
+                            سجل حسابك بالطريقة اللي تناسبك:
+                            بريد إلكتروني وكلمة مرور أو Google أو Microsoft.
                         </p>
                     </div>
                     <p class="text-sm text-cyan-100"></p>
                 </section>
 
                 <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                    <h2 class="text-2xl font-extrabold text-slate-900">تسجيل الدخول</h2>
-                    <p class="mt-2 text-sm text-slate-500">استخدم البريد الإلكتروني وكلمة المرور الخاصة بحسابك.</p>
+                    <h2 class="text-2xl font-extrabold text-slate-900">تسجيل مستخدم جديد</h2>
+                    <p class="mt-2 text-sm text-slate-500">املأ البيانات التالية لإنشاء حسابك.</p>
 
                     @if (TempData["LoginError"] is string extErr)
                     {
                         <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">@extErr</div>
                     }
 
-                    <form asp-action="Login" method="post" class="mt-6 space-y-4">
+                    <form asp-action="Register" method="post" class="mt-6 space-y-4">
                         <input asp-for="ReturnUrl" type="hidden" />
                         <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+                        <div>
+                            <label asp-for="FullName" class="mb-1 block text-sm font-bold text-slate-700">الاسم الكامل</label>
+                            <input asp-for="FullName" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="اكتب اسمك بالكامل" />
+                            <span asp-validation-for="FullName" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+                        </div>
 
                         <div>
                             <label asp-for="Email" class="mb-1 block text-sm font-bold text-slate-700">البريد الإلكتروني</label>
@@ -78,8 +85,8 @@
                         <div>
                             <label asp-for="Password" class="mb-1 block text-sm font-bold text-slate-700">كلمة المرور</label>
                             <div class="relative">
-                                <input asp-for="Password" id="UnifiedPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="••••••••" />
-                                <button type="button" data-toggle-target="UnifiedPasswordInput" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                                <input asp-for="Password" id="UnifiedRegisterPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="6 أحرف على الأقل" />
+                                <button type="button" data-toggle-target="UnifiedRegisterPasswordInput" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
                                     <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
@@ -94,25 +101,20 @@
                             <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
                         </div>
 
-                        <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600">
-                            <input asp-for="RememberMe" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-500" />
-                            تذكرني
-                        </label>
-
-                        <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-900">دخول</button>
+                        <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-900">إنشاء الحساب</button>
                     </form>
 
                     @if (hasExternalProviders)
                     {
                         <div class="mt-6">
-                            <p class="mb-3 text-sm font-bold text-slate-700">أو سجّل باستخدام</p>
+                            <p class="mb-3 text-sm font-bold text-slate-700">أو أنشئ الحساب مباشرة باستخدام</p>
                             <div class="grid gap-2 sm:grid-cols-2">
                                 @if (googleEnabled)
                                 {
                                     <form asp-action="ExternalLogin" method="post">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="provider" value="Google" />
-                                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                                        <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
                                         <button type="submit" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">Google</button>
                                     </form>
                                 }
@@ -122,7 +124,7 @@
                                     <form asp-action="ExternalLogin" method="post">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="provider" value="Microsoft" />
-                                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                                        <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
                                         <button type="submit" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">Microsoft</button>
                                     </form>
                                 }
@@ -131,19 +133,12 @@
                     }
 
                     <p class="mt-6 text-sm text-slate-600">
-                        ليس لديك حساب؟
-                        <a asp-action="Register" asp-route-returnUrl="@Model.ReturnUrl" class="font-extrabold text-brand-700 hover:text-brand-900">أنشئ حساب جديد</a>
+                        لديك حساب بالفعل؟
+                        <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl" class="font-extrabold text-brand-700 hover:text-brand-900">سجل الدخول من هنا</a>
                     </p>
                 </section>
             </div>
         </main>
-
-        <footer class="mt-8 rounded-2xl border border-slate-200 bg-white/80 px-6 py-5 text-sm text-slate-600 backdrop-blur">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="font-semibold text-slate-700">Ecomorce App - Unified Access Portal</p>
-                <p>Secure Login | Role-Based Redirect | @DateTime.Now.Year</p>
-            </div>
-        </footer>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
