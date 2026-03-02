@@ -1,0 +1,84 @@
+@model List<DataAccess.Models.Entities.Member>
+@{
+    ViewData["Title"] = "المستخدمين";
+}
+
+<section class="space-y-6">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h1 class="text-3xl font-extrabold text-slate-900">المستخدمين</h1>
+    </div>
+
+    @if (TempData["UserAction"] is string msg)
+    {
+        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
+    }
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+                <tr>
+                    <th class="px-4 py-3 text-right font-bold">الاسم</th>
+                    <th class="px-4 py-3 text-right font-bold">البريد الإلكتروني</th>
+                    <th class="px-4 py-3 text-right font-bold">الحالة</th>
+                    <th class="px-4 py-3 text-right font-bold">الصلاحية</th>
+                    <th class="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
+                    <th class="px-4 py-3 text-right font-bold">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-slate-500">لا يوجد مستخدمون حاليا.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td class="px-4 py-3 font-semibold text-slate-800">@user.FullName</td>
+                            <td class="px-4 py-3 text-slate-700" dir="ltr">@user.Email</td>
+                            <td class="px-4 py-3">
+                                @if (user.IsActive)
+                                {
+                                    <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="rounded-full bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">Blocked</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">User</span>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">@user.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="px-4 py-3">
+                                <form asp-area="Admin" asp-controller="Users" asp-action="ToggleBlock" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    @if (user.IsActive)
+                                    {
+                                        <button type="submit" title="حظر" aria-label="حظر" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 text-rose-700 transition hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V8a4.5 4.5 0 0 0-9 0v2.5M6.75 10.5h10.5A1.25 1.25 0 0 1 18.5 11.75v7A1.25 1.25 0 0 1 17.25 20h-10.5A1.25 1.25 0 0 1 5.5 18.75v-7A1.25 1.25 0 0 1 6.75 10.5Z" />
+                                            </svg>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" title="فك الحظر" aria-label="فك الحظر" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300 text-emerald-700 transition hover:bg-emerald-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10.5V8a3 3 0 1 0-6 0m-2.25 2.5h10.5A1.25 1.25 0 0 1 18.5 11.75v7A1.25 1.25 0 0 1 17.25 20h-10.5A1.25 1.25 0 0 1 5.5 18.75v-7A1.25 1.25 0 0 1 6.75 10.5Z" />
+                                            </svg>
+                                        </button>
+                                    }
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

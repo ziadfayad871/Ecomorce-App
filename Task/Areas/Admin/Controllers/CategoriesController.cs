@@ -12,10 +12,14 @@ namespace Task.Areas.Admin.Controllers
     public class CategoriesController : Controller
     {
         private readonly ICategoryRepository _categories;
+        private readonly IProductRepository _products;
 
-        public CategoriesController(ICategoryRepository categories)
+        public CategoriesController(
+            ICategoryRepository categories,
+            IProductRepository products)
         {
             _categories = categories;
+            _products = products;
         }
 
         public async Task<IActionResult> Index()
@@ -59,6 +63,29 @@ namespace Task.Areas.Admin.Controllers
             _categories.Update(c);
             await _categories.SaveChangesAsync();
 
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var category = await _categories.GetByIdAsync(id);
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            var linkedProducts = await _products.FindAsync(p => p.CategoryId == id);
+            if (linkedProducts.Count > 0)
+            {
+                TempData["CategoryAction"] = "Cannot delete category while products are linked to it.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            _categories.Remove(category);
+            await _categories.SaveChangesAsync();
+            TempData["CategoryAction"] = "Category deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
     }

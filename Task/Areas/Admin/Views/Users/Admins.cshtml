@@ -1,0 +1,54 @@
+@model List<DataAccess.Models.Identity.ApplicationUser>
+@{
+    ViewData["Title"] = "حسابات الأدمن";
+}
+
+<section class="space-y-6">
+    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <h1 class="text-3xl font-extrabold text-slate-900">حسابات الأدمن</h1>
+    </div>
+
+    @if (TempData["UserAction"] is string msg)
+    {
+        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
+    }
+
+    <div class="flex flex-wrap items-center gap-2">
+        <a asp-area="Admin" asp-controller="Users" asp-action="CreateAdmin" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إنشاء Admin جديد</a>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-slate-600">
+                <tr>
+                    <th class="px-4 py-3 text-right font-bold">الاسم</th>
+                    <th class="px-4 py-3 text-right font-bold">البريد الإلكتروني</th>
+                    <th class="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
+                    <th class="px-4 py-3 text-right font-bold">الصلاحية</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-slate-500">لا يوجد أي Admin حاليا.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var admin in Model)
+                    {
+                        <tr>
+                            <td class="px-4 py-3 font-semibold text-slate-800">@(string.IsNullOrWhiteSpace(admin.FullName) ? "Admin" : admin.FullName)</td>
+                            <td class="px-4 py-3 text-slate-700" dir="ltr">@admin.Email</td>
+                            <td class="px-4 py-3 text-slate-600">@admin.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="px-4 py-3">
+                                <span class="rounded-full bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">Admin</span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

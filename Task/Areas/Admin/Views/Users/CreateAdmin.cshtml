@@ -6,8 +6,6 @@
 <section class="mx-auto max-w-3xl">
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <h1 class="text-2xl font-extrabold text-slate-900"> إنشاء Admin</h1>
-        <p class="mt-2 text-sm text-slate-500">املأ البيانات لإنشاء حساب أدمن جديد.</p>
-
         <form asp-area="Admin" asp-controller="Users" asp-action="CreateAdmin" method="post" class="mt-6 space-y-4">
             @Html.AntiForgeryToken()
             <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
@@ -45,7 +43,7 @@
 
             <div class="flex flex-wrap gap-3">
                 <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إنشاء الأدمن</button>
-                <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">رجوع</a>
+                <a asp-area="Admin" asp-controller="Users" asp-action="Admins" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">رجوع</a>
             </div>
         </form>
     </div>

@@ -9,6 +9,11 @@
         <a asp-area="Admin" asp-controller="Categories" asp-action="Create" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إضافة تصنيف جديد</a>
     </div>
 
+    @if (TempData["CategoryAction"] is string msg)
+    {
+        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
+    }
+
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50 text-slate-600">
@@ -31,7 +36,23 @@
                         <tr>
                             <td class="px-4 py-3 font-semibold text-slate-800">@c.Name</td>
                             <td class="px-4 py-3">
-                                <a asp-area="Admin" asp-controller="Categories" asp-action="Edit" asp-route-id="@c.Id" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">تعديل</a>
+                                <div class="flex items-center gap-2">
+                                    <a asp-area="Admin" asp-controller="Categories" asp-action="Edit" asp-route-id="@c.Id" title="تعديل" aria-label="تعديل" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-admin-300 text-admin-700 transition hover:bg-admin-50">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
+                                        </svg>
+                                    </a>
+
+                                    <form asp-area="Admin" asp-controller="Categories" asp-action="Delete" method="post" class="inline" onsubmit="return confirm('حذف هذا التصنيف؟');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button type="submit" title="حذف" aria-label="حذف" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 text-rose-700 transition hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6h18M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6m-8 0h8m-7 3v9m3-9v9m3-9v9M5 6l1 14.25A1.75 1.75 0 0 0 7.75 22h8.5A1.75 1.75 0 0 0 18 20.25L19 6" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }

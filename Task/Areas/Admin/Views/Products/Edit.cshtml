@@ -1,12 +1,12 @@
 ﻿@model global::Task.Areas.Admin.ViewModels.ProductFormVm
 @{
-    ViewData["Title"] = "تعديل منتج";
+    ViewData["Title"] = "بيانات المنتج";
     var cats = ViewBag.Categories as List<DataAccess.Models.Entities.Category> ?? new();
 }
 
 <section class="mx-auto max-w-3xl">
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-2xl font-extrabold text-slate-900">تعديل المنتج</h1>
+        <h1 class="text-2xl font-extrabold text-slate-900">بيانات المنتج</h1>
 
         <form asp-area="Admin" asp-controller="Products" asp-action="Edit" method="post" enctype="multipart/form-data" class="mt-6 space-y-4">
             <input type="hidden" asp-for="Id" />
@@ -49,7 +49,7 @@
             </div>
 
             <div class="flex flex-wrap gap-3">
-                <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">حفظ التعديل</button>
+                <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">حفظ</button>
                 <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">رجوع</a>
             </div>
         </form>

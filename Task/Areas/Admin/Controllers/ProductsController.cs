@@ -115,5 +115,29 @@ namespace Task.Areas.Admin.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await _products.GetByIdAsync(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+
+            var images = await _images.FindAsync(x => x.ProductId == id);
+            foreach (var image in images)
+            {
+                _images.Remove(image);
+            }
+
+            _products.Remove(product);
+            await _images.SaveChangesAsync();
+            await _products.SaveChangesAsync();
+
+            TempData["ProductAction"] = "Product deleted successfully.";
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
