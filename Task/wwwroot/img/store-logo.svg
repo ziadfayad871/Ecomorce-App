@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Store Logo">
+  <defs>
+    <linearGradient id="roofGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4d5be8" />
+      <stop offset="100%" stop-color="#465fe9" />
+    </linearGradient>
+    <linearGradient id="shopGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2f8fe8" />
+      <stop offset="100%" stop-color="#16b7e2" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="256" fill="#bcc8d4" />
+
+  <rect x="129" y="138" width="254" height="45" rx="9" fill="url(#roofGradient)" />
+
+  <rect x="105" y="202" width="302" height="52" rx="14" fill="#3f78e8" />
+  <circle cx="129" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="160" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="191" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="222" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="253" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="284" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="315" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="346" cy="255" r="18" fill="#bcc8d4" />
+  <circle cx="377" cy="255" r="18" fill="#bcc8d4" />
+
+  <rect x="124" y="239" width="264" height="168" rx="10" fill="url(#shopGradient)" />
+
+  <rect x="166" y="266" width="74" height="141" rx="9" fill="none" stroke="#bcd8ec" stroke-width="16" />
+
+  <path d="M297 304h30v103h-30z" fill="#bcd8ec" />
+  <path d="M281 297v-23c0-10 8-18 18-18h2c7 0 14 4 18 10l5 7 5-7c4-6 11-10 18-10h2c10 0 18 8 18 18v23"
+        fill="none"
+        stroke="#bcd8ec"
+        stroke-width="16"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+  <path d="M282 299h90v47h-90z" fill="none" stroke="#bcd8ec" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

@@ -1,14 +1,92 @@
+@inject global::Core.Application.Common.Activities.IAdminActivityService ActivityService
+@using System.Linq
+@using System.Text.Json
 @{
-    var pageTitle = ViewData["Title"] as string ?? "لوحة إدارة متجر الملابس";
+    var pageTitle = ViewData["Title"] as string ?? "لوحة الإدارة";
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var selectedLanguage = string.Equals(Context.Request.Cookies["Admin.Language"], "en", StringComparison.OrdinalIgnoreCase) ? "en" : "ar";
+    var pageDir = selectedLanguage == "en" ? "ltr" : "rtl";
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
-    var isDashboardPage =
-        string.Equals(currentArea, "Admin", StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(currentController, "Dashboard", StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase);
-    var isDataSectionOpen = string.Equals(currentController, "Users", StringComparison.OrdinalIgnoreCase);
+    var userName = string.IsNullOrWhiteSpace(User.Identity?.Name) ? "مستخدم" : User.Identity!.Name!;
+    var isProductsSection = string.Equals(currentController, "Products", StringComparison.OrdinalIgnoreCase);
+    var isSectionsSection = string.Equals(currentController, "Categories", StringComparison.OrdinalIgnoreCase);
+    var isUsersSection = string.Equals(currentController, "Users", StringComparison.OrdinalIgnoreCase);
+    var isInsightsSection = string.Equals(currentController, "Dashboard", StringComparison.OrdinalIgnoreCase);
+    var isOrdersReportsSection = isInsightsSection &&
+        (string.Equals(currentAction, "Orders", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentAction, "Reports", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentAction, "Offers", StringComparison.OrdinalIgnoreCase));
+    var isSettingsSection = string.Equals(currentController, "Settings", StringComparison.OrdinalIgnoreCase);
+    var isMembersSection = isUsersSection &&
+        (string.Equals(currentAction, "Members", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(currentAction, "EditMember", StringComparison.OrdinalIgnoreCase));
+    var isLogsSection = isUsersSection && string.Equals(currentAction, "Logs", StringComparison.OrdinalIgnoreCase);
+    var isLanguageSection = isSettingsSection && string.Equals(currentAction, "Language", StringComparison.OrdinalIgnoreCase);
+    var isUsersMenuSection = isUsersSection &&
+        !string.Equals(currentAction, "Members", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(currentAction, "EditMember", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(currentAction, "Logs", StringComparison.OrdinalIgnoreCase);
+    var pendingNotifications = ActivityService
+        .GetAll()
+        .Take(40)
+        .Select(x => x.Message)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .ToList();
+    var flashMessages = new List<(string Message, bool IsError)>();
+
+    bool IsLikelyError(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        var value = message.Trim();
+        var errorWords = new[]
+        {
+            "خطأ", "فشل", "غير مسموح", "تعذر", "غير صالح", "Invalid", "Error", "Failed", "not allowed", "unable"
+        };
+
+        return errorWords.Any(x => value.Contains(x, StringComparison.OrdinalIgnoreCase));
+    }
+
+    void PushFlash(string? message, bool isError = false)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        flashMessages.Add((message.Trim(), isError));
+    }
+
+    var dashboardAction = TempData["DashboardAction"] as string;
+    var productAction = TempData["ProductAction"] as string;
+    var categoryAction = TempData["CategoryAction"] as string;
+    var userAction = TempData["UserAction"] as string;
+    var settingsAction = TempData["SettingsAction"] as string;
+    var accountAction = TempData["AccountAction"] as string;
+
+    PushFlash(dashboardAction, IsLikelyError(dashboardAction));
+    PushFlash(productAction, IsLikelyError(productAction));
+    PushFlash(categoryAction, IsLikelyError(categoryAction));
+    PushFlash(userAction, IsLikelyError(userAction));
+    PushFlash(settingsAction, IsLikelyError(settingsAction));
+    PushFlash(accountAction, IsLikelyError(accountAction));
+
+    PushFlash(TempData["DashboardError"] as string, true);
+    PushFlash(TempData["ProductError"] as string, true);
+    PushFlash(TempData["CategoryError"] as string, true);
+    PushFlash(TempData["UserError"] as string, true);
+    PushFlash(TempData["SettingsError"] as string, true);
+    PushFlash(TempData["AccountError"] as string, true);
+    PushFlash(TempData["Error"] as string, true);
+
+    var flashMessagesJson = JsonSerializer.Serialize(
+        flashMessages.Select(x => new { message = x.Message, isError = x.IsError })
+    );
 
     string GetNavClass(string controller, string action)
     {
@@ -18,31 +96,39 @@
             string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
 
         return isActive
-            ? "flex items-center justify-between rounded-xl bg-admin-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm"
-            : "flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-admin-50 hover:text-admin-700";
+            ? "group flex items-center gap-2 rounded-lg bg-admin-50 px-3 py-2 text-[13px] font-bold text-admin-800"
+            : "group flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 transition hover:bg-slate-100 hover:text-admin-800";
+    }
+
+    string GetStateNavClass(bool isActive)
+    {
+        return isActive
+            ? "group flex items-center gap-2 rounded-lg bg-admin-50 px-3 py-2 text-[13px] font-bold text-admin-800"
+            : "group flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 transition hover:bg-slate-100 hover:text-admin-800";
     }
 }
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="h-full">
+<html lang="@selectedLanguage" dir="@pageDir" class="h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@pageTitle - Ecomorce App</title>
+    <title>@pageTitle - مستخدم</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ["Cairo", "sans-serif"]
-                    },
+                    fontFamily: { sans: ["Cairo", "sans-serif"] },
                     colors: {
                         admin: {
-                            50: "#ecfeff",
-                            100: "#cffafe",
-                            500: "#06b6d4",
-                            700: "#0e7490",
-                            900: "#164e63"
+                            50: "#f0f9ff",
+                            100: "#e0f2fe",
+                            200: "#bae6fd",
+                            500: "#0ea5e9",
+                            600: "#0284c7",
+                            700: "#0369a1",
+                            800: "#075985",
+                            900: "#0c4a6e"
                         }
                     }
                 }
@@ -54,104 +140,877 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Task.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
 </head>
-<body class="min-h-full bg-slate-100 font-sans text-slate-800 antialiased">
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-24 right-10 h-96 w-96 rounded-full bg-admin-100 blur-3xl"></div>
-        <div class="absolute bottom-0 left-0 h-72 w-72 -translate-x-20 translate-y-20 rounded-full bg-cyan-200/70 blur-3xl"></div>
-    </div>
+<body class="admin-shell min-h-full bg-slate-100 font-sans text-slate-800 antialiased">
+    <div class="notification-container"></div>
+    <div id="adminFlashMessages" class="hidden" data-messages='@flashMessagesJson'></div>
 
-    <div class="mx-auto min-h-screen max-w-[1600px] px-4 py-4 sm:px-6 lg:px-8">
-        <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-            <aside class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:overflow-y-auto">
-                <div class="border-b border-slate-200 pb-4">
-                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="text-xl font-extrabold text-admin-900">لوحة الإدارة</a>
-                    <p class="mt-1 text-xs font-semibold text-slate-500">Fashion Store Control Panel</p>
+    <header class="fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/95 shadow-2xl shadow-slate-300/70 backdrop-blur">
+        <div class="mx-auto flex h-16 max-w-[1800px] items-center justify-between px-3 sm:px-4 lg:px-6">
+            <div class="flex items-center gap-2">
+                <button id="toggleAdminSidebar" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100" aria-label="القائمة">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5 text-xs font-bold text-admin-800 transition hover:bg-slate-50" aria-label="الرئيسية">
+                    <img src="~/img/store-logo.svg" alt="أناقة بلس" class="h-7 w-7 rounded-full object-cover" />
+                </a>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <button id="notificationsBtn" type="button" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-admin-700 transition hover:bg-admin-50" aria-expanded="false">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .53-.2 1.04-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
+                        </svg>
+                        <span id="notificationsBadge" class="absolute -top-1 -left-1 hidden min-w-[16px] items-center justify-center rounded-full bg-admin-700 px-1 text-[10px] font-bold text-white">0</span>
+                    </button>
+                    <div id="notificationsMenu" class="absolute left-0 top-10 hidden w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                        <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                            <p class="text-xs font-bold text-slate-500">الإشعارات</p>
+                            <button id="clearNotificationsBtn" type="button" class="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">حذف الكل</button>
+                        </div>
+                        <div id="notificationsList" class="max-h-72 overflow-auto">
+                            <p id="emptyNotificationsMsg" class="px-3 py-6 text-center text-xs font-bold text-slate-500">لا توجد إشعارات حالياً</p>
+                        </div>
+                    </div>
                 </div>
 
-                @if (isAuthenticated)
-                {
-                    <nav class="mt-5 space-y-5">
-                        <div class="space-y-2">
-                            <p class="px-2 text-xs font-extrabold tracking-[0.2em] text-slate-400">MAIN</p>
-                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="@GetNavClass("Dashboard", "Index")">
-                                <span>Dashboard</span>
-                            </a>
-                        </div>
-
-                        <div class="space-y-2">
-                            <p class="px-2 text-xs font-extrabold tracking-[0.2em] text-slate-400">إدارة المتجر</p>
-                            <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="@GetNavClass("Products", "Index")">
-                                <span>المنتجات</span>
-                            </a>
-                            <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="@GetNavClass("Categories", "Index")">
-                                <span>التصنيفات</span>
-                            </a>
-                        </div>
-
-                        <details class="group rounded-2xl border border-slate-200/80 bg-slate-50/60 p-2" @(isDataSectionOpen ? "open" : null)>
-                            <summary class="flex cursor-pointer list-none items-center justify-between rounded-xl px-3 py-2 text-sm font-extrabold text-slate-700 transition hover:bg-white">
-                                <span>إدارة البيانات</span>
-                                <span class="text-xs text-slate-500 transition group-open:rotate-180">⌄</span>
-                            </summary>
-                            <div class="mt-2 space-y-1">
-                                <a asp-area="Admin" asp-controller="Users" asp-action="Admins" class="@GetNavClass("Users", "Admins")">
-                                    <span>حسابات الأدمن</span>
-                                </a>
-                                <a asp-area="Admin" asp-controller="Users" asp-action="Members" class="@GetNavClass("Users", "Members")">
-                                    <span>المستخدمين</span>
-                                </a>
-                            </div>
-                        </details>
-                    </nav>
-
-                    <div class="mt-6 border-t border-slate-200 pt-4">
-                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                <div class="relative">
+                    <button id="accountMenuBtn" type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-50" aria-expanded="false">
+                        <span class="account-avatar inline-flex h-7 w-7 items-center justify-center rounded-full bg-admin-100 text-admin-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm5 13a8 8 0 1 0-16 0h16Z" />
+                            </svg>
+                        </span>
+                        <span class="account-name max-w-[110px] truncate">@userName</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="account-arrow h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div id="accountMenu" class="absolute left-0 top-10 hidden w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white text-right shadow-xl">
+                        <a asp-area="Admin" asp-controller="Settings" asp-action="Account" class="flex items-center gap-2 border-b border-slate-100 px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8a7 7 0 0 1 14 0" />
+                            </svg>
+                            <span>إعدادات الحساب</span>
+                        </a>
+                        <form asp-area="Admin" asp-controller="Account" asp-action="Logout" method="post" class="p-2">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="w-full rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700">تسجيل الخروج</button>
+                            <button type="submit" class="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-admin-700 bg-admin-700 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-admin-700">تسجيل الخروج</button>
                         </form>
                     </div>
-                }
-                else
-                {
-                    <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="text-sm font-bold text-slate-700">الوصول للوحة الإدارة يتطلب حساب Admin.</p>
-                        <a asp-area="" asp-controller="Account" asp-action="Login" class="mt-3 inline-flex rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">دخول المدير</a>
-                    </div>
-                }
-            </aside>
+                </div>
+            </div>
+        </div>
+    </header>
 
-            <div class="space-y-4">
-                <header class="rounded-3xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:px-6">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                            <p class="text-xs font-bold tracking-[0.2em] text-admin-700">ADMIN PANEL</p>
-                            <h1 class="mt-1 text-xl font-extrabold text-slate-900">@pageTitle</h1>
+    <div id="sidebarBackdrop" class="fixed inset-0 z-40 hidden bg-slate-900/45 lg:hidden"></div>
+
+    <aside id="adminSidebar" class="admin-sidebar-panel fixed inset-y-0 right-0 z-50 w-[280px] translate-x-full border-l border-slate-200 shadow-2xl transition-transform duration-300 lg:top-16 lg:translate-x-0">
+        <div class="flex h-full flex-col p-3">
+            <div class="sidebar-head mb-3 flex items-center justify-end lg:hidden">
+                <button id="closeAdminSidebar" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-100" aria-label="إغلاق القائمة">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M18 6 6 18" />
+                    </svg>
+                </button>
+            </div>
+
+            @if (isAuthenticated)
+            {
+                <nav class="flex min-h-full flex-col gap-1.5">
+                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="@GetNavClass("Dashboard", "Index")" title="الرئيسية" data-tooltip="الرئيسية">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12h8V3H3v9Zm10 9h8v-6h-8v6Zm0-8h8V3h-8v10ZM3 21h8v-7H3v7Z" />
+                        </svg>
+                        <span class="nav-label">الرئيسية</span>
+                    </a>
+
+                    <details class="rounded-lg border border-slate-200 bg-white" @(isOrdersReportsSection ? "open" : null)>
+                        <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[13px] font-bold @(isOrdersReportsSection ? "bg-admin-50 text-admin-800" : "text-slate-700 hover:bg-slate-100")" title="الطلبات والتقارير" data-tooltip="الطلبات والتقارير" data-collapsed-href="@Url.Action("Orders", "Dashboard", new { area = "Admin" })">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h6m-8 8h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8L4 7v10a2 2 0 0 0 2 2Z" />
+                                </svg>
+                                <span class="nav-label">الطلبات والتقارير</span>
+                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="nav-arrow h-4 w-4 text-slate-400 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                            </svg>
+                        </summary>
+                        <div class="space-y-1 px-2 pb-2">
+                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Orders" asp-route-range="today" class="@GetNavClass("Dashboard", "Orders")" title="إدارة الطلبات" data-tooltip="إدارة الطلبات">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 6h11l-1 12H8L7 6h2Zm-2 0h14M5 6l-1-2H2" />
+                                </svg>
+                                <span class="nav-label">إدارة الطلبات</span>
+                            </a>
+                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Reports" class="@GetNavClass("Dashboard", "Reports")" title="تقارير المبيعات" data-tooltip="تقارير المبيعات">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 14h4v6H4v-6Zm6-5h4v11h-4V9Zm6-3h4v14h-4V6Z" />
+                                </svg>
+                                <span class="nav-label">تقارير المبيعات</span>
+                            </a>
+                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Offers" class="@GetNavClass("Dashboard", "Offers")" title="العروض والكوبونات" data-tooltip="العروض والكوبونات">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 9V7a2 2 0 1 1 4 0v2m-6 1h12v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9Z" />
+                                </svg>
+                                <span class="nav-label">العروض والكوبونات</span>
+                            </a>
                         </div>
+                    </details>
 
-                        @if (isAuthenticated && !isDashboardPage)
-                        {
-                            <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-xl border border-admin-300 bg-admin-50 px-4 py-2 text-sm font-bold text-admin-700 transition hover:bg-admin-100">العودة للصفحة الرئيسية</a>
-                        }
-                    </div>
-                </header>
+                    <details class="rounded-lg border border-slate-200 bg-white" @(isProductsSection ? "open" : null)>
+                        <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[13px] font-bold @(isProductsSection ? "bg-admin-50 text-admin-800" : "text-slate-700 hover:bg-slate-100")" title="إدارة المنتجات" data-tooltip="إدارة المنتجات" data-collapsed-href="@Url.Action("Index", "Products", new { area = "Admin" })">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 7.5 9 4.5 9-4.5M3 7.5 12 3l9 4.5M3 7.5V16.5L12 21m9-13.5V16.5L12 21m0 0v-9" />
+                                </svg>
+                                <span class="nav-label">إدارة المنتجات</span>
+                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="nav-arrow h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                            </svg>
+                        </summary>
+                        <div class="space-y-1 px-2 pb-2">
+                            <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="@GetNavClass("Products", "Index")" title="المنتجات" data-tooltip="المنتجات">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 7.5 9 4.5 9-4.5M3 7.5 12 3l9 4.5M3 7.5V16.5L12 21m9-13.5V16.5L12 21m0 0v-9" />
+                                </svg>
+                                <span class="nav-label">المنتجات</span>
+                            </a>
+                            <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="@GetNavClass("Products", "Create")" title="إضافة منتج" data-tooltip="إضافة منتج">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                                </svg>
+                                <span class="nav-label">إضافة منتج</span>
+                            </a>
+                        </div>
+                    </details>
 
-                <main role="main" class="pb-4">
-                    @RenderBody()
-                </main>
+                    <details class="rounded-lg border border-slate-200 bg-white" @(isSectionsSection ? "open" : null)>
+                        <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[13px] font-bold @(isSectionsSection ? "bg-admin-50 text-admin-800" : "text-slate-700 hover:bg-slate-100")" title="إدارة الأقسام" data-tooltip="إدارة الأقسام" data-collapsed-href="@Url.Action("Index", "Categories", new { area = "Admin" })">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+                                </svg>
+                                <span class="nav-label">إدارة الأقسام</span>
+                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="nav-arrow h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                            </svg>
+                        </summary>
+                        <div class="space-y-1 px-2 pb-2">
+                            <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="@GetNavClass("Categories", "Index")" title="الأقسام" data-tooltip="الأقسام">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+                                </svg>
+                                <span class="nav-label">الأقسام</span>
+                            </a>
+                            <a asp-area="Admin" asp-controller="Categories" asp-action="Create" class="@GetNavClass("Categories", "Create")" title="إضافة قسم" data-tooltip="إضافة قسم">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                                </svg>
+                                <span class="nav-label">إضافة قسم</span>
+                            </a>
+                        </div>
+                    </details>
 
-                <footer class="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-xs text-slate-500 shadow-sm sm:px-6">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <p>Admin Panel &copy; @DateTime.Now.Year</p>
-                        <p>Data Management | Store Management | Secure Access</p>
-                    </div>
-                </footer>
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Members" class="@GetStateNavClass(isMembersSection)" title="عرض المشتركين" data-tooltip="عرض المشتركين">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM3 20a7 7 0 0 1 14 0M19 8h2m-1-1v2" />
+                        </svg>
+                        <span class="nav-label">عرض المشتركين</span>
+                    </a>
+
+                    <details class="rounded-lg border border-slate-200 bg-white" @(isUsersMenuSection ? "open" : null)>
+                        <summary class="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-[13px] font-bold @(isUsersMenuSection ? "bg-admin-50 text-admin-800" : "text-slate-700 hover:bg-slate-100")" title="إدارة المستخدمين" data-tooltip="إدارة المستخدمين" data-collapsed-href="@Url.Action("Admins", "Users", new { area = "Admin" })">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM3 20a7 7 0 0 1 14 0M17 8h4m-2-2v4" />
+                                </svg>
+                                <span class="nav-label">إدارة المستخدمين</span>
+                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="nav-arrow h-4 w-4 text-slate-400 transition group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                            </svg>
+                        </summary>
+                        <div class="space-y-1 px-2 pb-2">
+                            <a asp-area="Admin" asp-controller="Users" asp-action="Admins" class="@GetNavClass("Users", "Admins")" title="عرض المستخدمين" data-tooltip="عرض المستخدمين">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m12 3 7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" />
+                                </svg>
+                                <span class="nav-label">عرض المستخدمين</span>
+                            </a>
+                            <a asp-area="Admin" asp-controller="Users" asp-action="Roles" class="@GetNavClass("Users", "Roles")" title="عرض المجموعات" data-tooltip="عرض المجموعات">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6.5h16M4 12h16M4 17.5h16" />
+                                </svg>
+                                <span class="nav-label">عرض المجموعات</span>
+                            </a>
+                        </div>
+                    </details>
+
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Logs" class="@GetStateNavClass(isLogsSection)" title="سجل العمليات" data-tooltip="سجل العمليات">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h8m-8 4h5m-7 6h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8l-4 4v12a2 2 0 0 0 2 2Z" />
+                        </svg>
+                        <span class="nav-label">سجل العمليات</span>
+                    </a>
+
+                    <a asp-area="Admin" asp-controller="Settings" asp-action="Language" class="@GetStateNavClass(isLanguageSection)" title="إعدادات اللغة" data-tooltip="إعدادات اللغة">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5h12M9 3v2m2.5 0a13.5 13.5 0 0 1-3 7.5M5 17h6m-3-2v6m7-2.5 3-8 3 8m-5.4-2h4.8" />
+                        </svg>
+                        <span class="nav-label">إعدادات اللغة</span>
+                    </a>
+
+                </nav>
+            }
+        </div>
+    </aside>
+
+    <div id="adminMainWrapper" class="min-h-screen pt-16 transition-all duration-300 lg:pr-[280px]">
+        <main class="mx-auto max-w-[1800px] p-3 sm:p-4 lg:p-6">
+            @RenderBody()
+        </main>
+        <footer class="mx-auto mb-3 max-w-[1800px] px-3 sm:px-4 lg:px-6">
+            <div class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-center text-xs font-bold text-slate-600 shadow-sm">
+                © @DateTime.Now.Year أناقة بلس - لوحة التحكم
+            </div>
+        </footer>
+    </div>
+
+    <div id="deleteModal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4">
+        <div id="deleteModalBackdrop" class="absolute inset-0 bg-slate-900/45"></div>
+        <div class="relative z-10 w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+            <h3 id="deleteModalTitle" class="text-lg font-extrabold text-slate-900">تأكيد الحذف</h3>
+            <p id="deleteModalMessage" class="mt-2 text-sm text-slate-600">هل أنت متأكد من تنفيذ الحذف؟</p>
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" data-delete-close class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">إلغاء</button>
+                <button id="deleteModalConfirm" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700">حذف</button>
             </div>
         </div>
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            var sidebar = document.getElementById("adminSidebar");
+            var mainWrapper = document.getElementById("adminMainWrapper");
+            var toggleSidebarBtn = document.getElementById("toggleAdminSidebar");
+            var closeSidebarBtn = document.getElementById("closeAdminSidebar");
+            var sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+            var notificationsBtn = document.getElementById("notificationsBtn");
+            var notificationsMenu = document.getElementById("notificationsMenu");
+            var notificationsBadge = document.getElementById("notificationsBadge");
+            var clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
+            var notificationsList = document.getElementById("notificationsList");
+            var emptyNotificationsMsg = document.getElementById("emptyNotificationsMsg");
+            var accountBtn = document.getElementById("accountMenuBtn");
+            var accountMenu = document.getElementById("accountMenu");
+
+            var deleteModal = document.getElementById("deleteModal");
+            var deleteModalBackdrop = document.getElementById("deleteModalBackdrop");
+            var deleteModalMessage = document.getElementById("deleteModalMessage");
+            var deleteModalConfirm = document.getElementById("deleteModalConfirm");
+            var toastContainer = document.querySelector(".notification-container");
+            var flashSeed = document.getElementById("adminFlashMessages");
+            var pendingDeleteForm = null;
+            var notificationCount = 0;
+            var currentLanguage = "@selectedLanguage";
+            var flashItems = [];
+            var translateValue = function (text) { return text; };
+
+            if (flashSeed) {
+                try {
+                    flashItems = JSON.parse(flashSeed.dataset.messages || "[]");
+                } catch (e) {
+                    flashItems = [];
+                }
+            }
+
+            function applyLanguage() {
+                if (currentLanguage !== "en") {
+                    document.documentElement.lang = "ar";
+                    document.documentElement.dir = "rtl";
+                    document.body.classList.remove("lang-en");
+                    return;
+                }
+
+                var dictionary = {
+                    "لوحة التحكم": "Dashboard",
+                    "مركز ذكاء الأعمال": "Business Intelligence Center",
+                    "لوحة موحّدة لمتابعة الأداء وربط أقسام الإدارة الرئيسية": "A unified workspace to monitor performance and connect the main admin sections.",
+                    "مستخدم": "Admin",
+                    "أناقة بلس": "Anaqa Plus",
+                    "الرئيسية": "Home",
+                    "الطلبات والتقارير": "Orders & Reports",
+                    "إدارة الطلبات": "Order Management",
+                    "تقارير المبيعات": "Sales Reports",
+                    "العروض والكوبونات": "Offers & Coupons",
+                    "إدارة المنتجات": "Product Management",
+                    "المنتجات": "Products",
+                    "إضافة منتج": "Add Product",
+                    "إدارة الأقسام": "Categories Management",
+                    "الأقسام": "Categories",
+                    "إضافة قسم": "Add Category",
+                    "عرض المشتركين": "Members",
+                    "إدارة المستخدمين": "Users Management",
+                    "عرض المستخدمين": "Admins",
+                    "عرض المجموعات": "Groups",
+                    "سجل العمليات": "Activity Log",
+                    "إعدادات اللغة": "Language Settings",
+                    "إعدادات الحساب": "Account Settings",
+                    "تسجيل الخروج": "Logout",
+                    "الإشعارات": "Notifications",
+                    "حذف الكل": "Clear All",
+                    "لا توجد إشعارات حالياً": "No notifications yet",
+                    "إغلاق": "Close",
+                    "تأكيد الحذف": "Confirm Delete",
+                    "هل أنت متأكد من تنفيذ الحذف؟": "Are you sure you want to continue?",
+                    "هل تريد حذف هذا القسم؟": "Do you want to delete this category?",
+                    "إلغاء": "Cancel",
+                    "حذف": "Delete",
+                    "فتح": "Open",
+                    "عرض": "View",
+                    "الآن": "Now",
+                    "بحث": "Search",
+                    "حفظ": "Save",
+                    "اختر اللغة": "Choose Language",
+                    "العربية": "Arabic",
+                    "تحديث": "Update",
+                    "الفترة": "Range",
+                    "فلاتر الفترة": "Date Filters",
+                    "الفترة الحالية:": "Current range:",
+                    "من تاريخ": "From",
+                    "إلى تاريخ": "To",
+                    "عرض البيانات من": "Showing data from",
+                    "إلى": "to",
+                    "اليوم": "Today",
+                    "الأسبوع": "Week",
+                    "الشهر": "Month",
+                    "آخر 30 يوم": "Last 30 Days",
+                    "رؤى العملاء": "Customer Insights",
+                    "تحليل نشاط الأعضاء وحالة الحسابات.": "Track member activity and account status.",
+                    "عرض الأعضاء": "Open Members",
+                    "أداء المبيعات": "Sales Performance",
+                    "متابعة الإيرادات واتجاهات النمو.": "Monitor revenue and growth trends.",
+                    "فتح التقارير": "Open Reports",
+                    "ذكاء المنتجات": "Product Intelligence",
+                    "إدارة المنتجات وتنبيهات المخزون.": "Manage products and low-stock alerts.",
+                    "منخفض المخزون": "Low stock",
+                    "إدارة المنتجات": "Manage Products",
+                    "تحليلات التسويق": "Marketing Analytics",
+                    "متابعة العروض والكوبونات النشطة.": "Track active offers and coupons.",
+                    "عرض نشط": "Active offers",
+                    "إدارة العروض": "Manage Offers",
+                    "النظرة المالية": "Financial Overview",
+                    "قراءة سريعة لحركة الطلبات والمدفوعات.": "A quick view of orders and payments.",
+                    "فتح إدارة الطلبات": "Open Orders",
+                    "تقارير مخصصة": "Custom Reports",
+                    "تقرير مرن حسب الفترة وحالة الطلبات.": "Flexible reports by date range and order status.",
+                    "طلب يحتاج متابعة": "Needs attention",
+                    "إنشاء تقرير": "Create Report",
+                    "إجمالي المبيعات": "Total Sales",
+                    "مبيعات اليوم": "Today's Sales",
+                    "إجمالي الطلبات": "Total Orders",
+                    "طلبات اليوم": "Today's Orders",
+                    "متوسط قيمة الطلب": "Average Order Value",
+                    "الطلبات المعلّقة": "Pending Orders",
+                    "منتجات منخفضة المخزون": "Low Stock Products",
+                    "أعضاء جدد (آخر 30 يوم)": "New Members (Last 30 Days)",
+                    "مقارنة بالفترة السابقة": "Compared to previous period",
+                    "حركة المبيعات اليومية": "Daily sales activity",
+                    "حجم الطلبات الكلي": "Overall order volume",
+                    "طلبات آخر 24 ساعة": "Orders in the last 24 hours",
+                    "تحتاج متابعة": "Needs follow-up",
+                    "تنبيهات مخزون": "Inventory alerts",
+                    "مقارنة بآخر 30 يوم سابقة": "Compared with the previous 30 days",
+                    "المبيعات آخر 30 يوم": "Sales in the Last 30 Days",
+                    "بيانات حقيقية": "Live Data",
+                    "لا توجد مبيعات حتى الآن": "No sales yet",
+                    "لا توجد بيانات مبيعات.": "No sales data available.",
+                    "قبل 30 يوم": "30 days ago",
+                    "توزيع الطلبات حسب الحالة": "Orders by Status",
+                    "لا توجد طلبات": "No Orders",
+                    "لا توجد بيانات": "No Data",
+                    "مكتمل": "Completed",
+                    "قيد الشحن": "Shipping",
+                    "ملغي": "Cancelled",
+                    "آخر 10 طلبات": "Latest 10 Orders",
+                    "تحديث تلقائي": "Auto updated",
+                    "رقم الطلب": "Order #",
+                    "العميل": "Customer",
+                    "الإجمالي": "Total",
+                    "الحالة": "Status",
+                    "التاريخ": "Date",
+                    "إجراء": "Action",
+                    "لا توجد طلبات حديثة.": "No recent orders.",
+                    "عرض الطلب": "View order",
+                    "إجراءات سريعة": "Quick Actions",
+                    "اختصارات": "Shortcuts",
+                    "كوبونات/عروض": "Coupons / Offers",
+                    "تنبيهات ذكية": "Smart Alerts",
+                    "متابعة فورية": "Live Monitoring",
+                    "طلبات متأخرة": "Delayed Orders",
+                    "فتح الطلبات المتأخرة": "Open delayed orders",
+                    "مرتجعات / شكاوى": "Returns / Complaints",
+                    "فتح الشكاوى": "Open complaints",
+                    "الأعضاء غير المفعلين": "Inactive Members",
+                    "فتح الأعضاء غير المفعلين": "Open inactive members",
+                    "إجمالي الأقسام:": "Total categories:",
+                    "عدد الصفوف": "Rows per page",
+                    "عدد المنتجات": "Products count",
+                    "عرض المنتجات": "View products",
+                    "تعديل القسم": "Edit category",
+                    "حذف القسم": "Delete category",
+                    "لا توجد أقسام حالياً.": "No categories available.",
+                    "طباعة الأقسام الحالية": "Print current categories",
+                    "تصدير الأقسام إلى Excel": "Export categories to Excel",
+                    "تقرير الأقسام": "Categories Report",
+                    "تاريخ الطباعة:": "Printed at:",
+                    "اسم القسم": "Category Name",
+                    "الاسم": "Name",
+                    "البريد الإلكتروني": "Email",
+                    "كلمة مرور جديدة (اختياري)": "New password (optional)",
+                    "تأكيد كلمة المرور": "Confirm password",
+                    "تم حفظ إعدادات اللغة بنجاح.": "Language settings were saved successfully.",
+                    "تم تحديث بيانات الحساب بنجاح.": "Account details were updated successfully.",
+                    "تم إضافة القسم بنجاح.": "Category created successfully.",
+                    "تم تحديث القسم بنجاح.": "Category updated successfully.",
+                    "تم حذف القسم بنجاح.": "Category deleted successfully.",
+                    "لا يمكن حذف القسم لوجود منتجات مرتبطة به.": "The category cannot be deleted because linked products exist.",
+                    "تم تصدير بيانات الأقسام.": "Categories exported successfully.",
+                    "ابحث بالاسم أو البريد...": "Search by name or email...",
+                    "البحث بالاسم أو البريد...": "Search by name or email..."
+                };
+                var dictionaryKeys = Object.keys(dictionary).sort(function (a, b) { return b.length - a.length; });
+
+                translateValue = function (text) {
+                    if (!text) return text;
+                    var result = String(text);
+                    dictionaryKeys.forEach(function (key) {
+                        if (result.indexOf(key) !== -1) {
+                            result = result.split(key).join(dictionary[key]);
+                        }
+                    });
+                    return result;
+                };
+
+                document.documentElement.lang = "en";
+                document.documentElement.dir = "ltr";
+                document.body.classList.add("lang-en");
+                document.title = translateValue(document.title);
+
+                document.querySelectorAll("[dir='rtl']").forEach(function (el) {
+                    el.setAttribute("dir", "ltr");
+                });
+
+                ["title", "aria-label", "placeholder", "data-tooltip"].forEach(function (attr) {
+                    document.querySelectorAll("[" + attr + "]").forEach(function (el) {
+                        var value = el.getAttribute(attr);
+                        var translated = translateValue(value);
+                        if (translated !== value) {
+                            el.setAttribute(attr, translated);
+                        }
+                    });
+                });
+
+                var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+                var textNode;
+                while ((textNode = walker.nextNode())) {
+                    var parent = textNode.parentElement;
+                    if (!parent) continue;
+                    var tag = parent.tagName;
+                    if (tag === "SCRIPT" || tag === "STYLE") continue;
+
+                    var currentText = textNode.nodeValue;
+                    var translatedText = translateValue(currentText);
+                    if (translatedText !== currentText) {
+                        textNode.nodeValue = translatedText;
+                    }
+                }
+            }
+
+            var desktopCollapsed = localStorage.getItem("admin.sidebar.collapsed") === "1";
+            function isDesktop() { return window.matchMedia("(min-width: 1024px)").matches; }
+            function getSidebarHiddenClass() { return currentLanguage === "en" ? "-translate-x-full" : "translate-x-full"; }
+            function clearSidebarHiddenClasses() {
+                if (!sidebar) return;
+                sidebar.classList.remove("translate-x-full");
+                sidebar.classList.remove("-translate-x-full");
+            }
+
+            function applySidebarState() {
+                if (!sidebar || !mainWrapper) return;
+                if (isDesktop()) {
+                    clearSidebarHiddenClasses();
+                    sidebar.classList.remove("lg:translate-x-full");
+                    sidebar.classList.add("lg:translate-x-0");
+                    sidebar.classList.toggle("sidebar-icons-only", desktopCollapsed);
+                    mainWrapper.classList.toggle("sidebar-icons-only", desktopCollapsed);
+                    sidebarBackdrop && sidebarBackdrop.classList.add("hidden");
+                    document.body.classList.remove("overflow-hidden");
+                } else {
+                    sidebar.classList.remove("sidebar-icons-only");
+                    mainWrapper.classList.remove("sidebar-icons-only");
+                    sidebar.classList.remove("lg:translate-x-full");
+                    sidebar.classList.add("lg:translate-x-0");
+                    clearSidebarHiddenClasses();
+                    sidebar.classList.add(getSidebarHiddenClass());
+                    sidebarBackdrop && sidebarBackdrop.classList.add("hidden");
+                    document.body.classList.remove("overflow-hidden");
+                }
+
+                sidebar.querySelectorAll("details").forEach(function (detail) {
+                    detail.classList.remove("flyout-open");
+                    if (desktopCollapsed && isDesktop()) {
+                        detail.removeAttribute("open");
+                    }
+                });
+            }
+
+            function openMobileSidebar() {
+                if (!sidebar || !sidebarBackdrop) return;
+                clearSidebarHiddenClasses();
+                sidebarBackdrop.classList.remove("hidden");
+                document.body.classList.add("overflow-hidden");
+            }
+            function closeMobileSidebar() {
+                if (!sidebar || !sidebarBackdrop) return;
+                clearSidebarHiddenClasses();
+                sidebar.classList.add(getSidebarHiddenClass());
+                sidebarBackdrop.classList.add("hidden");
+                document.body.classList.remove("overflow-hidden");
+            }
+
+            function closeMenus() {
+                notificationsMenu && notificationsMenu.classList.add("hidden");
+                accountMenu && accountMenu.classList.add("hidden");
+                notificationsBtn && notificationsBtn.setAttribute("aria-expanded", "false");
+                accountBtn && accountBtn.setAttribute("aria-expanded", "false");
+            }
+
+            function escapeHtml(value) {
+                return String(value || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function positionToasts() {
+                if (!toastContainer) return;
+                var items = toastContainer.querySelectorAll(".notification");
+                items.forEach(function (item) {
+                    item.style.top = "";
+                });
+            }
+
+            function hideToast(id) {
+                var notification = document.getElementById(id);
+                if (!notification) return;
+
+                notification.classList.remove("show");
+                notification.classList.add("hide");
+                setTimeout(function () {
+                    notification.remove();
+                    positionToasts();
+                }, 500);
+            }
+
+            function showNotification(isSuccess, message) {
+                if (!toastContainer) return;
+                var safeMessage = translateValue((message || "").toString().trim());
+                if (!safeMessage) return;
+
+                var notificationId = "notification-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+                var notificationClass = isSuccess ? "success" : "error";
+                var iconSymbol = isSuccess ? "✓" : "!";
+                var duration = isSuccess ? 3000 : 5000;
+
+                var notificationHTML =
+                    "<div id='" + notificationId + "' class='notification " + notificationClass + "'>" +
+                    "<span class='notification-icon'>" + iconSymbol + "</span>" +
+                    "<span class='notification-message'>" + escapeHtml(safeMessage) + "</span>" +
+                    "<button type='button' class='notification-close' data-hide-id='" + notificationId + "' aria-label='" + escapeHtml(translateValue("إغلاق")) + "'>" +
+                    "×" +
+                    "</button>" +
+                    "<div class='notification-progress'><div class='notification-progress-bar'></div></div>" +
+                    "</div>";
+
+                toastContainer.insertAdjacentHTML("afterbegin", notificationHTML);
+                var notification = document.getElementById(notificationId);
+                var progressBar = notification ? notification.querySelector(".notification-progress-bar") : null;
+
+                setTimeout(function () {
+                    if (!notification) return;
+                    notification.classList.add("show");
+                    positionToasts();
+                }, 100);
+
+                setTimeout(function () {
+                    hideToast(notificationId);
+                }, duration);
+
+                if (notification && progressBar) {
+                    notification.addEventListener("mouseenter", function () {
+                        progressBar.style.animationPlayState = "paused";
+                    });
+                    notification.addEventListener("mouseleave", function () {
+                        progressBar.style.animationPlayState = "running";
+                    });
+                }
+            }
+
+            function seedValidationToasts() {
+                var seen = {};
+                var nodes = document.querySelectorAll(".validation-summary-errors li, .field-validation-error, [data-valmsg-for].text-danger");
+                nodes.forEach(function (node) {
+                    var text = (node.textContent || "").trim();
+                    if (!text || seen[text]) return;
+                    seen[text] = true;
+                    showNotification(false, text);
+                });
+            }
+
+            window.hideNotification = hideToast;
+
+            sidebar && sidebar.addEventListener("click", function (event) {
+                var summary = event.target.closest("summary");
+                var detailFromSummary = summary && summary.parentElement && summary.parentElement.tagName === "DETAILS"
+                    ? summary.parentElement
+                    : null;
+
+                if (detailFromSummary && isDesktop() && sidebar.classList.contains("sidebar-icons-only")) {
+                    event.preventDefault();
+                    var nextState = !detailFromSummary.classList.contains("flyout-open");
+                    sidebar.querySelectorAll("details.flyout-open, details[open]").forEach(function (openDetail) {
+                        openDetail.classList.remove("flyout-open");
+                        openDetail.removeAttribute("open");
+                    });
+                    detailFromSummary.classList.toggle("flyout-open", nextState);
+                    if (nextState) {
+                        detailFromSummary.setAttribute("open", "");
+                    } else {
+                        detailFromSummary.removeAttribute("open");
+                    }
+                    return;
+                }
+
+                if (event.target.closest("details > div a") && isDesktop() && sidebar.classList.contains("sidebar-icons-only")) {
+                    sidebar.querySelectorAll("details.flyout-open, details[open]").forEach(function (openDetail) {
+                        openDetail.classList.remove("flyout-open");
+                        openDetail.removeAttribute("open");
+                    });
+                }
+            });
+
+            function renderNotificationCount() {
+                if (!notificationsBadge) return;
+                notificationsBadge.textContent = notificationCount.toString();
+                notificationsBadge.classList.toggle("hidden", notificationCount <= 0);
+                notificationsBadge.classList.toggle("inline-flex", notificationCount > 0);
+            }
+
+            function showEmptyNotifications(show) {
+                if (!emptyNotificationsMsg) return;
+                emptyNotificationsMsg.classList.toggle("hidden", !show);
+            }
+
+            function addNotification(text, href) {
+                if (!notificationsList || !text) return;
+                var displayText = translateValue(text);
+
+                showEmptyNotifications(false);
+                var item = document.createElement("a");
+                item.href = href || "#";
+                item.className = "block border-b border-slate-100 px-3 py-2 transition hover:bg-slate-50";
+                item.innerHTML =
+                    "<p class='text-sm font-bold text-slate-800'>" + escapeHtml(displayText) + "</p>" +
+                    "<p class='text-[11px] text-slate-500'>" + escapeHtml(translateValue("الآن")) + "</p>";
+                notificationsList.prepend(item);
+                notificationCount += 1;
+                renderNotificationCount();
+            }
+
+            function clearNotifications() {
+                if (!notificationsList) return;
+                Array.from(notificationsList.querySelectorAll("a")).forEach(function (a) { a.remove(); });
+                notificationCount = 0;
+                renderNotificationCount();
+                showEmptyNotifications(true);
+            }
+
+            toggleSidebarBtn && toggleSidebarBtn.addEventListener("click", function () {
+                if (isDesktop()) {
+                    desktopCollapsed = !desktopCollapsed;
+                    localStorage.setItem("admin.sidebar.collapsed", desktopCollapsed ? "1" : "0");
+                    applySidebarState();
+                } else if (sidebar && sidebar.classList.contains("translate-x-full")) {
+                    openMobileSidebar();
+                } else {
+                    closeMobileSidebar();
+                }
+            });
+            closeSidebarBtn && closeSidebarBtn.addEventListener("click", closeMobileSidebar);
+            sidebarBackdrop && sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+            window.addEventListener("resize", applySidebarState);
+            applyLanguage();
+            applySidebarState();
+
+            notificationsBtn && notificationsBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                var open = notificationsMenu && notificationsMenu.classList.contains("hidden");
+                closeMenus();
+                if (open && notificationsMenu) {
+                    notificationsMenu.classList.remove("hidden");
+                    notificationsBtn.setAttribute("aria-expanded", "true");
+                }
+            });
+
+            clearNotificationsBtn && clearNotificationsBtn.addEventListener("click", function () {
+                clearNotifications();
+            });
+
+            accountBtn && accountBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                var open = accountMenu && accountMenu.classList.contains("hidden");
+                closeMenus();
+                if (open && accountMenu) {
+                    accountMenu.classList.remove("hidden");
+                    accountBtn.setAttribute("aria-expanded", "true");
+                }
+            });
+
+            function openDeleteModal(form, message) {
+                if (!deleteModal || !deleteModalMessage) return;
+                pendingDeleteForm = form;
+                deleteModalMessage.textContent = message || "هل أنت متأكد من تنفيذ الحذف؟";
+                deleteModal.classList.remove("hidden");
+                deleteModal.classList.add("flex");
+                document.body.classList.add("overflow-hidden");
+            }
+            function closeDeleteModal() {
+                if (!deleteModal) return;
+                pendingDeleteForm = null;
+                deleteModal.classList.add("hidden");
+                deleteModal.classList.remove("flex");
+                document.body.classList.remove("overflow-hidden");
+            }
+
+            document.addEventListener("click", function (event) {
+                var closeToast = event.target.closest("[data-hide-id]");
+                if (closeToast) {
+                    hideToast(closeToast.getAttribute("data-hide-id"));
+                    return;
+                }
+
+                if (isDesktop() && sidebar && sidebar.classList.contains("sidebar-icons-only") && !event.target.closest("#adminSidebar")) {
+                    sidebar.querySelectorAll("details.flyout-open, details[open]").forEach(function (openDetail) {
+                        openDetail.classList.remove("flyout-open");
+                        openDetail.removeAttribute("open");
+                    });
+                }
+
+                var trigger = event.target.closest("[data-delete-trigger]");
+                if (trigger) {
+                    var form = trigger.closest("form");
+                    if (!form) return;
+                    openDeleteModal(form, trigger.getAttribute("data-delete-message"));
+                    return;
+                }
+                if (event.target.closest("[data-delete-close]") || event.target === deleteModalBackdrop) {
+                    closeDeleteModal();
+                    return;
+                }
+                if (!event.target.closest("#notificationsMenu") && !event.target.closest("#notificationsBtn") &&
+                    !event.target.closest("#accountMenu") && !event.target.closest("#accountMenuBtn")) {
+                    closeMenus();
+                }
+            });
+
+            deleteModalConfirm && deleteModalConfirm.addEventListener("click", function () {
+                if (pendingDeleteForm) pendingDeleteForm.submit();
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if ((event.key === "Enter" || event.key === " ") &&
+                    event.target &&
+                    event.target.matches &&
+                    event.target.matches("#adminSidebar summary") &&
+                    isDesktop() &&
+                    sidebar &&
+                    sidebar.classList.contains("sidebar-icons-only")) {
+                    event.preventDefault();
+                    var summaryTarget = event.target;
+                    var detailTarget = summaryTarget.parentElement && summaryTarget.parentElement.tagName === "DETAILS"
+                        ? summaryTarget.parentElement
+                        : null;
+                    if (!detailTarget) return;
+                    var shouldOpen = !detailTarget.classList.contains("flyout-open");
+                    sidebar.querySelectorAll("details.flyout-open, details[open]").forEach(function (openDetail) {
+                        openDetail.classList.remove("flyout-open");
+                        openDetail.removeAttribute("open");
+                    });
+                    detailTarget.classList.toggle("flyout-open", shouldOpen);
+                    if (shouldOpen) {
+                        detailTarget.setAttribute("open", "");
+                    } else {
+                        detailTarget.removeAttribute("open");
+                    }
+                    return;
+                }
+
+                if (event.key === "Escape") {
+                    closeMobileSidebar();
+                    closeDeleteModal();
+                    closeMenus();
+                }
+            });
+
+            window.adminAddNotification = function (text, href) {
+                addNotification(text, href);
+            };
+
+            var seededNotifications = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(pendingNotifications));
+            if (Array.isArray(seededNotifications)) {
+                for (var i = seededNotifications.length - 1; i >= 0; i--) {
+                    addNotification(seededNotifications[i], "#");
+                }
+            }
+            renderNotificationCount();
+
+            if (Array.isArray(flashItems)) {
+                flashItems.forEach(function (item) {
+                    showNotification(!(item && item.isError), item ? item.message : "");
+                });
+            }
+
+            seedValidationToasts();
+
+            document.querySelectorAll(".admin-table a, .admin-table button").forEach(function (el) {
+                el.classList.add("admin-action-btn");
+                var existingTitle = (el.getAttribute("title") || "").trim();
+                if (!existingTitle) {
+                    var label = (el.getAttribute("aria-label") || el.textContent || "").trim();
+                    if (label) {
+                        el.setAttribute("title", label);
+                    }
+                }
+            });
+
+        })();
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

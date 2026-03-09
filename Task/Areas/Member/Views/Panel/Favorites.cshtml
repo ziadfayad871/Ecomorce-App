@@ -1,0 +1,109 @@
+﻿@model List<global::Core.Application.Members.Models.MemberFavoriteCardVm>
+@{
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<form id="memberFavoriteAntiForgery" class="hidden">@Html.AntiForgeryToken()</form>
+
+<section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        @await Html.PartialAsync("_PanelSideNav")
+
+        <div class="space-y-6">
+            <section class="member-surface rounded-3xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="member-chip">متابعة المنتجات</span>
+                        <h1 class="mt-4 text-3xl font-black text-slate-900">المنتجات المتابعة</h1>
+                        <p class="mt-2 text-sm font-semibold leading-8 text-slate-600">كل منتج ضغطت عليه متابعة سيظهر هنا ليسهل الرجوع إليه لاحقًا.</p>
+                    </div>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Index" asp-fragment="product1" class="member-btn-primary px-5 py-3 text-sm">استكشف المتجر</a>
+                </div>
+            </section>
+
+            <section class="member-surface rounded-3xl p-5" id="favoritesGridWrapper">
+                @if (Model.Count == 0)
+                {
+                    <div class="member-grid-empty px-6 py-12 text-center text-sm font-bold text-slate-500">
+                        لا توجد منتجات في قائمة المتابعة حتى الآن.
+                    </div>
+                }
+                else
+                {
+                    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" id="favoritesGrid">
+                        @foreach (var product in Model)
+                        {
+                            var image = string.IsNullOrWhiteSpace(product.ImagePath) ? Url.Content("~/img/store-logo.svg") : product.ImagePath;
+                            <article class="member-product-card" data-favorite-card="@product.ProductId">
+                                <img src="@image" alt="@product.Name" class="member-product-card-image" />
+                                <div class="member-product-card-body">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-xs font-black text-slate-400">@product.CategoryName</p>
+                                            <h3 class="mt-1 text-base font-black text-slate-900">@product.Name</h3>
+                                        </div>
+                                        <button type="button" class="favorite-toggle-btn member-favorite-chip is-tracked" data-product-id="@product.ProductId" data-is-tracked="true" aria-pressed="true" title="إلغاء المتابعة">
+                                            <i class="fas fa-heart"></i>
+                                        </button>
+                                    </div>
+                                    <div class="mt-3 flex items-center justify-between gap-3">
+                                        <span class="text-sm font-black text-brand-700">@product.Price.ToString("0.00") ج.م</span>
+                                        <span class="text-xs font-black @(product.StockQuantity > 0 ? "text-emerald-600" : "text-rose-600")">
+                                            @(product.StockQuantity > 0 ? $"متوفر: {product.StockQuantity}" : "غير متوفر")
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 flex gap-2">
+                                        <a asp-area="Member" asp-controller="Home" asp-action="Index" asp-fragment="product1" class="member-btn-outline flex-1 px-4 py-2 text-center text-sm">فتح المتجر</a>
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.favorite-toggle-btn').forEach(function (button) {
+            button.addEventListener('click', async function () {
+                var productId = this.getAttribute('data-product-id');
+                if (!productId || !window.memberStore) return;
+
+                var result = await window.memberStore.toggleFavorite(productId, '@returnUrl');
+                if (!result) return;
+
+                if (result.requiresLogin && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                    return;
+                }
+
+                if (!result.success) {
+                    showNotification(false, result.message || 'تعذر تحديث المتابعة');
+                    return;
+                }
+
+                if (!result.isTracked) {
+                    var card = this.closest('[data-favorite-card]');
+                    if (card) card.remove();
+                }
+
+                showNotification(true, result.message || 'تم تحديث المتابعة');
+
+                if (!document.querySelector('[data-favorite-card]')) {
+                    var wrapper = document.getElementById('favoritesGridWrapper');
+                    if (wrapper) {
+                        wrapper.innerHTML = '<div class="member-grid-empty px-6 py-12 text-center text-sm font-bold text-slate-500">لا توجد منتجات في قائمة المتابعة حتى الآن.</div>';
+                    }
+                }
+            });
+        });
+    });
+</script>
+}
+
+
+

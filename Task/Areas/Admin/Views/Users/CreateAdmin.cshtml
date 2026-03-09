@@ -1,18 +1,24 @@
 ﻿@model global::Task.Areas.Admin.ViewModels.CreateAdminVm
 @{
-    ViewData["Title"] = "إنشاء Admin جديد";
+    ViewData["Title"] = "إضافة مشرف";
 }
 
-<section class="mx-auto max-w-3xl">
+<section class="w-full">
     <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-2xl font-extrabold text-slate-900"> إنشاء Admin</h1>
+        <h1 class="page-title inline-flex w-full items-center gap-2 text-2xl font-extrabold text-slate-900">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+            </svg>
+            إضافة مشرف جديد
+        </h1>
+        <hr class="header-divider mt-3 border-slate-200" />
         <form asp-area="Admin" asp-controller="Users" asp-action="CreateAdmin" method="post" class="mt-6 space-y-4">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+            <div asp-validation-summary="All" class="rounded-xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm text-admin-700"></div>
 
             <div>
                 <label asp-for="FullName" class="mb-1 block text-sm font-bold text-slate-700">الاسم</label>
-                <input asp-for="FullName" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="Admin Name" />
+                <input asp-for="FullName" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="اسم المشرف" />
                 <span asp-validation-for="FullName" class="mt-1 block text-xs font-semibold text-rose-600"></span>
             </div>
 
@@ -25,7 +31,7 @@
             <div>
                 <label asp-for="Password" class="mb-1 block text-sm font-bold text-slate-700">كلمة المرور</label>
                 <div class="relative">
-                    <input asp-for="Password" id="CreateAdminPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="••••••••" />
+                    <input asp-for="Password" id="CreateAdminPasswordInput" type="password" dir="ltr" class="input-with-icon w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="••••••••" />
                     <button type="button" data-toggle-target="CreateAdminPasswordInput" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
                         <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
@@ -41,8 +47,8 @@
                 <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
             </div>
 
-            <div class="flex flex-wrap gap-3">
-                <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إنشاء الأدمن</button>
+            <div class="flex flex-wrap justify-center gap-3">
+                <button type="submit" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">حفظ المشرف</button>
                 <a asp-area="Admin" asp-controller="Users" asp-action="Admins" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-500 hover:text-admin-700">رجوع</a>
             </div>
         </form>

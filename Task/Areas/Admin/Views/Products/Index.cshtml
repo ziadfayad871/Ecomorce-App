@@ -1,70 +1,369 @@
-﻿@model List<DataAccess.Models.Entities.Product>
+@model List<Core.Domain.Entities.Product>
 @{
     ViewData["Title"] = "المنتجات";
+    var sections = ViewBag.Categories as List<Core.Domain.Entities.Category> ?? new();
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
+    int? selectedCategoryId = ViewBag.SelectedCategoryId is int categoryId ? categoryId : null;
+    var pageSize = ViewBag.PageSize is int ps ? ps : 25;
+    var currentPage = ViewBag.CurrentPage is int cp ? cp : 1;
+    var totalPages = ViewBag.TotalPages is int tp ? tp : 1;
+    var totalItems = ViewBag.TotalItems is int ti ? ti : Model.Count;
+    var pageSizeOptions = new[] { 25, 50, 75, 100 };
+
+    var startPage = Math.Max(1, currentPage - 2);
+    var endPage = Math.Min(totalPages, startPage + 4);
+    if (endPage - startPage < 4)
+    {
+        startPage = Math.Max(1, endPage - 4);
+    }
+
+    var selectedCategoryName = "كل الأقسام";
+    if (selectedCategoryId.HasValue)
+    {
+        selectedCategoryName = sections.FirstOrDefault(c => c.Id == selectedCategoryId.Value)?.Name ?? "كل الأقسام";
+    }
 }
 
-<section class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-extrabold text-slate-900">بطاقات المنتجات</h1>
-        <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إضافة منتج جديد</a>
+<style>
+    .products-print-sheet {
+        display: none;
+    }
+
+    .products-print-sheet .sheet {
+        color: #0f172a;
+        font-size: 12px;
+    }
+
+    .products-print-sheet h2 {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .products-print-sheet .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-bottom: 12px;
+        color: #334155;
+        font-size: 12px;
+    }
+
+    .products-print-sheet table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .products-print-sheet th,
+    .products-print-sheet td {
+        border: 1px solid #cbd5e1;
+        padding: 7px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .products-print-sheet thead th {
+        background: #e2e8f0;
+        font-weight: 800;
+    }
+
+    @@media print {
+        @@page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        body * {
+            visibility: hidden !important;
+        }
+
+        #productsPrintSheet,
+        #productsPrintSheet * {
+            visibility: visible !important;
+        }
+
+        #productsPrintSheet {
+            display: block !important;
+            position: fixed;
+            inset: 0;
+            background: #fff;
+        }
+
+        #productsPrintSheet .sheet {
+            padding: 0;
+            margin: 0;
+        }
+    }
+</style>
+
+<section class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m3 7.5 9 4.5 9-4.5M3 7.5 12 3l9 4.5M3 7.5V16.5L12 21m9-13.5V16.5L12 21m0 0v-9" />
+            </svg>
+            إدارة المنتجات
+        </h1>
+
+        <div class="mr-auto flex items-center gap-2">
+            <button type="button"
+                    onclick="printProductsInPage()"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700"
+                    title="طباعة النتائج الحالية">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8V4h10v4M6 17H4a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2m-8 0h4m-6 3h8a1 1 0 0 0 1-1v-5H9v5a1 1 0 0 0 1 1Z" />
+                </svg>
+                طباعة
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Products"
+               asp-action="ExportExcel"
+               asp-route-searchTerm="@searchTerm"
+               asp-route-categoryId="@selectedCategoryId"
+               class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+               title="تصدير النتائج الحالية إلى Excel">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-8 0H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m-1 4-2 10m6-10 2 10M8 12h8" />
+                </svg>
+                تصدير Excel
+            </a>
+
+            <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="inline-flex items-center gap-1.5 rounded-md bg-admin-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                </svg>
+                إضافة منتج
+            </a>
+        </div>
+
+        <hr class="header-divider w-full border-slate-200" />
     </div>
 
-    @if (TempData["ProductAction"] is string msg)
-    {
-        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
-    }
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <form method="get" asp-area="Admin" asp-controller="Products" asp-action="Index" class="space-y-2">
+            <input type="hidden" name="page" value="1" />
+            <input type="hidden" name="pageSize" value="@pageSize" />
 
-    @if (Model.Count == 0)
-    {
-        <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            لا توجد منتجات حاليا. أضف أول منتج ليظهر ككارت في المتجر.
-        </div>
-    }
-    else
-    {
-        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            @foreach (var p in Model)
-            {
-                var img = p.Images?.FirstOrDefault()?.Path;
-                <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div class="aspect-[3/4] w-full overflow-hidden bg-slate-100">
-                        @if (!string.IsNullOrWhiteSpace(img))
+            <div class="grid gap-2 md:grid-cols-2">
+                <input name="searchTerm"
+                       value="@searchTerm"
+                       type="search"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100"
+                       placeholder="ابحث باسم المنتج..." />
+
+                <select name="categoryId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100">
+                    <option value="">كل الأقسام</option>
+                    @foreach (var c in sections)
+                    {
+                        if (selectedCategoryId == c.Id)
                         {
-                            <img src="@img" alt="@p.Name" class="h-full w-full object-cover" />
+                            <option value="@c.Id" selected>@c.Name</option>
                         }
                         else
                         {
-                            <div class="flex h-full items-center justify-center text-sm font-semibold text-slate-400">No Image</div>
+                            <option value="@c.Id">@c.Name</option>
                         }
-                    </div>
+                    }
+                </select>
+            </div>
 
-                    <div class="space-y-3 p-4">
-                        <div>
-                            <p class="text-xs font-bold text-admin-700">@(p.Category?.Name ?? "بدون تصنيف")</p>
-                            <h2 class="mt-1 text-lg font-extrabold text-slate-900">@p.Name</h2>
-                            <p class="mt-1 text-sm font-bold text-slate-700">@p.Price.ToString("0.00") EGP</p>
-                        </div>
+            <div class="flex items-center justify-end gap-2">
+                <button type="submit" class="rounded-xl bg-admin-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-800">بحث</button>
+                <a asp-area="Admin" asp-controller="Products" asp-action="Index" asp-route-pageSize="@pageSize" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">إلغاء</a>
+            </div>
+        </form>
+    </div>
 
-                        <div class="flex items-center justify-end gap-2">
-                            <a asp-area="Admin" asp-controller="Products" asp-action="Edit" asp-route-id="@p.Id" title="تعديل" aria-label="تعديل" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-admin-300 text-admin-700 transition hover:bg-admin-50">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
-                                </svg>
-                            </a>
-
-                            <form asp-area="Admin" asp-controller="Products" asp-action="Delete" method="post" class="inline" onsubmit="return confirm('حذف هذا المنتج؟');">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="id" value="@p.Id" />
-                                <button type="submit" title="حذف" aria-label="حذف" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-300 text-rose-700 transition hover:bg-rose-50">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6h18M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6m-8 0h8m-7 3v9m3-9v9m3-9v9M5 6l1 14.25A1.75 1.75 0 0 0 7.75 22h8.5A1.75 1.75 0 0 0 18 20.25L19 6" />
-                                    </svg>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </article>
-            }
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 text-xs">
+            <span class="font-bold text-slate-600">إجمالي النتائج: <span class="admin-stat-number">@totalItems</span></span>
+            <form method="get" asp-area="Admin" asp-controller="Products" asp-action="Index" class="flex items-center gap-2" dir="ltr">
+                <input type="hidden" name="searchTerm" value="@searchTerm" />
+                @if (selectedCategoryId.HasValue)
+                {
+                    <input type="hidden" name="categoryId" value="@selectedCategoryId" />
+                }
+                <input type="hidden" name="page" value="1" />
+                <span class="font-bold text-slate-600">عدد الصفوف</span>
+                <select name="pageSize" onchange="this.form.submit()" class="rounded-md border border-slate-300 px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-admin-500">
+                    @foreach (var size in pageSizeOptions)
+                    {
+                        if (size == pageSize)
+                        {
+                            <option value="@size" selected>@size</option>
+                        }
+                        else
+                        {
+                            <option value="@size">@size</option>
+                        }
+                    }
+                </select>
+            </form>
         </div>
-    }
+
+        <table class="admin-table text-sm">
+            <thead>
+                <tr>
+                    <th class="px-3 py-3 font-bold">المنتج</th>
+                    <th class="px-3 py-3 font-bold">القسم</th>
+                    <th class="px-3 py-3 font-bold">السعر</th>
+                    <th class="px-3 py-3 font-bold">المخزون</th>
+                    <th class="px-3 py-3 font-bold">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="px-4 py-10 text-center font-semibold text-slate-500">لا توجد منتجات مطابقة حالياً.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var product in Model)
+                    {
+                        var img = product.Images?.FirstOrDefault()?.Path;
+                        <tr>
+                            <td class="px-3 py-3">
+                                <div class="mx-auto flex w-fit items-center gap-2">
+                                    <div class="h-10 w-10 overflow-hidden rounded-md bg-slate-100">
+                                        @if (!string.IsNullOrWhiteSpace(img))
+                                        {
+                                            <img src="@img" alt="@product.Name" class="h-full w-full object-cover" />
+                                        }
+                                    </div>
+                                    <span class="font-semibold text-slate-800">@product.Name</span>
+                                </div>
+                            </td>
+                            <td class="px-3 py-3 text-slate-700">@(product.Category?.Name ?? "بدون قسم")</td>
+                            <td class="px-3 py-3 text-center text-slate-700">
+                                <span class="mx-auto block w-fit admin-stat-number">@product.Price.ToString("0.00") EGP</span>
+                            </td>
+                            <td class="px-3 py-3 text-center">
+                                @if (product.StockQuantity <= 0)
+                                {
+                                    <span class="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">نفد</span>
+                                }
+                                else if (product.StockQuantity <= 5)
+                                {
+                                    <span class="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">@product.StockQuantity</span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">@product.StockQuantity</span>
+                                }
+                            </td>
+                            <td class="px-3 py-3">
+                                <div class="mx-auto flex w-fit items-center gap-2">
+                                    <a asp-area="Admin" asp-controller="Products" asp-action="Edit" asp-route-id="@product.Id" class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition" title="تعديل المنتج" aria-label="تعديل المنتج">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
+                                        </svg>
+                                    </a>
+
+                                    <form asp-area="Admin" asp-controller="Products" asp-action="Delete" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@product.Id" />
+                                        <button type="button" data-delete-trigger data-delete-message="هل تريد حذف هذا المنتج؟" class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-300 text-red-700 transition" title="حذف المنتج" aria-label="حذف المنتج">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6h18M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6m-8 0h8m-7 3v9m3-9v9m3-9v9M5 6l1 14.25A1.75 1.75 0 0 0 7.75 22h8.5A1.75 1.75 0 0 0 18 20.25L19 6" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="flex flex-wrap items-center justify-center gap-1 border-t border-slate-200 px-3 py-2 text-xs">
+            <a asp-area="Admin"
+               asp-controller="Products"
+               asp-action="Index"
+               asp-route-searchTerm="@searchTerm"
+               asp-route-categoryId="@selectedCategoryId"
+               asp-route-pageSize="@pageSize"
+               asp-route-page="@(currentPage - 1)"
+               class="inline-flex h-8 min-w-[32px] items-center justify-center rounded-md border px-2 font-bold transition @(currentPage <= 1 ? "pointer-events-none cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" : "border-slate-300 bg-white text-slate-700 hover:border-admin-300 hover:text-admin-700")">السابق</a>
+
+            @for (var i = startPage; i <= endPage; i++)
+            {
+                <a asp-area="Admin"
+                   asp-controller="Products"
+                   asp-action="Index"
+                   asp-route-searchTerm="@searchTerm"
+                   asp-route-categoryId="@selectedCategoryId"
+                   asp-route-pageSize="@pageSize"
+                   asp-route-page="@i"
+                   class="inline-flex h-8 min-w-[32px] items-center justify-center rounded-md border px-2 font-bold transition @(i == currentPage ? "border-admin-600 bg-admin-600 text-white underline decoration-2 underline-offset-4" : "border-slate-300 bg-white text-slate-700 hover:border-admin-300 hover:text-admin-700 hover:underline")">@i</a>
+            }
+
+            <a asp-area="Admin"
+               asp-controller="Products"
+               asp-action="Index"
+               asp-route-searchTerm="@searchTerm"
+               asp-route-categoryId="@selectedCategoryId"
+               asp-route-pageSize="@pageSize"
+               asp-route-page="@(currentPage + 1)"
+               class="inline-flex h-8 min-w-[32px] items-center justify-center rounded-md border px-2 font-bold transition @(currentPage >= totalPages ? "pointer-events-none cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400" : "border-slate-300 bg-white text-slate-700 hover:border-admin-300 hover:text-admin-700")">التالي</a>
+        </div>
+    </div>
 </section>
+
+<section id="productsPrintSheet" class="products-print-sheet">
+    <div class="sheet">
+        <h2>تقرير المنتجات</h2>
+        <div class="meta">
+            <span><strong>القسم:</strong> @selectedCategoryName</span>
+            <span><strong>البحث:</strong> @(string.IsNullOrWhiteSpace(searchTerm) ? "الكل" : searchTerm)</span>
+            <span><strong>إجمالي النتائج:</strong> @totalItems</span>
+            <span><strong>تاريخ الطباعة:</strong> @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم المنتج</th>
+                    <th>القسم</th>
+                    <th>السعر</th>
+                    <th>المخزون</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4">لا توجد منتجات مطابقة حالياً.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var product in Model)
+                    {
+                        <tr>
+                            <td>@product.Name</td>
+                            <td>@(product.Category?.Name ?? "بدون قسم")</td>
+                            <td>@product.Price.ToString("0.00") EGP</td>
+                            <td>@product.StockQuantity</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        function printProductsInPage() {
+            window.print();
+        }
+    </script>
+}

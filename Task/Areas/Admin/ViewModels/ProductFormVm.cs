@@ -12,9 +12,14 @@ namespace Task.Areas.Admin.ViewModels
         [Range(0, 999999)]
         public decimal Price { get; set; }
 
+        [Range(0, 999999)]
+        public int StockQuantity { get; set; }
+
         [Required]
         public int CategoryId { get; set; }
 
         public IFormFile? Image { get; set; }
+
+        public string? ExistingImagePath { get; set; }
     }
 }

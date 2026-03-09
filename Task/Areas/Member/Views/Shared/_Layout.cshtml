@@ -1,11 +1,48 @@
 ﻿@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Http
+@using System.Linq
+@using System.Text.Json
 @{
-    var pageTitle = ViewData["Title"] as string ?? "بوابة متجر الملابس";
+    var pageTitle = ViewData["Title"] as string ?? "اناقة بلس";
     var cartCount = Context.Session.GetInt32("CartCount") ?? 0;
     var memberAuth = await Context.AuthenticateAsync("MemberCookie");
     var isMemberAuthenticated = memberAuth.Succeeded;
     var memberName = memberAuth.Principal?.Identity?.Name;
+    var currentPath = Context.Request.Path.Value ?? "";
+
+    var isHomePage = currentPath.Equals("/Member/Home/Index", System.StringComparison.OrdinalIgnoreCase)
+        || currentPath.Equals("/Member/Home", System.StringComparison.OrdinalIgnoreCase)
+        || currentPath.Equals("/Member", System.StringComparison.OrdinalIgnoreCase)
+        || currentPath.Equals("/", System.StringComparison.OrdinalIgnoreCase);
+    var isCartPage = currentPath.Contains("/Member/Home/Cart", System.StringComparison.OrdinalIgnoreCase);
+    var isAboutPage = currentPath.Contains("/Member/Home/About", System.StringComparison.OrdinalIgnoreCase);
+    var isContactPage = currentPath.Contains("/Member/Home/Contact", System.StringComparison.OrdinalIgnoreCase);
+    var isPanelPage = currentPath.Contains("/Member/Panel", System.StringComparison.OrdinalIgnoreCase);
+    var isOrdersPage = currentPath.Contains("/Member/Panel/Orders", System.StringComparison.OrdinalIgnoreCase);
+    var isFavoritesPage = currentPath.Contains("/Member/Panel/Favorites", System.StringComparison.OrdinalIgnoreCase);
+    var isProfilePage = currentPath.Contains("/Member/Panel/Profile", System.StringComparison.OrdinalIgnoreCase);
+
+    var memberFlashMessages = new List<(string Message, bool IsError)>();
+    void PushFlash(string? message, bool isError = false)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        memberFlashMessages.Add((message.Trim(), isError));
+    }
+
+    PushFlash(TempData["StoreSuccess"] as string);
+    PushFlash(TempData["ContactSuccess"] as string);
+    PushFlash(TempData["Success"] as string);
+    PushFlash(TempData["StoreError"] as string, true);
+    PushFlash(TempData["ContactError"] as string, true);
+    PushFlash(TempData["Error"] as string, true);
+
+    var memberFlashMessagesJson = JsonSerializer.Serialize(
+        memberFlashMessages.Select(x => new { message = x.Message, isError = x.IsError })
+    );
 }
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="h-full">
@@ -13,114 +50,485 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@pageTitle - Ecomorce App</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            safelist: [
+                'text-[#0369a1]',
+                'hover:text-[#0369a1]',
+                'bg-[#0369a1]',
+                'border-[#0369a1]',
+                'focus:ring-[#0369a1]'
+            ],
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ["Cairo", "sans-serif"]
                     },
                     colors: {
-                        brand: {
-                            50: "#f0f9ff",
-                            100: "#e0f2fe",
-                            500: "#0ea5e9",
-                            700: "#0369a1",
-                            900: "#0c4a6e"
-                        }
+                        primary: '#0369a1'
                     }
                 }
             }
-        };
+        }
     </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <script src="https://kit.fontawesome.com/87ba71bd3b.js" crossorigin="anonymous"></script>
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/member.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/Task.styles.css" asp-append-version="true" />
 </head>
-<body class="min-h-full bg-slate-100 font-sans text-slate-800 antialiased">
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-brand-100 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-64 w-64 translate-x-20 translate-y-20 rounded-full bg-sky-200/70 blur-3xl"></div>
+<body class="member-store-body bg-gray-100 overscroll-contain antialiased">
+    <div id="loading">
+        <span class="loading-text">جارٍ التحميل</span>
+        <div class="flex">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
     </div>
 
-    <div class="mx-auto flex min-h-screen max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
-        <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/85 backdrop-blur">
-            <div class="flex h-20 items-center justify-between gap-3">
-                <div>
-                    <a asp-area="Member" asp-controller="Home" asp-action="Index" class="text-xl font-extrabold text-brand-900">متجر الملابس</a>
-                    <p class="text-xs font-semibold text-slate-500">تسوق سريع وآمن</p>
+    <div id="mobile-menu-backdrop" class="mobile-menu-backdrop hidden"></div>
+    <div id="memberToastContainer" class="notification-container"></div>
+
+    <nav class="tw-navbar fixed top-0 left-0 w-full z-50 shadow-lg bg-white border-b-2 border-[#0369a1]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center">
+                    <a class="flex items-center gap-3 logo-link" asp-area="Member" asp-controller="Home" asp-action="Index">
+                        <img src="~/img/store-logo.svg" alt="شعار المتجر" class="store-logo-img" />
+                        <span class="text-base font-black text-slate-900 sm:text-lg">اناقة بلس</span>
+                    </a>
                 </div>
 
-                <nav class="flex flex-wrap items-center gap-2 text-sm font-bold">
-                    <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">العربة (@cartCount)</a>
+                <div class="hidden md:flex items-center space-x-8 space-x-reverse">
+                    <a class="px-3 py-2 text-base font-medium @(isHomePage ? "text-[#0369a1] font-semibold active" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Index">الرئيسية</a>
+                    <a class="px-3 py-2 text-base font-medium @(isHomePage ? "text-[#0369a1] font-semibold active" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Index" asp-fragment="product1">تسوق</a>
+                    @if (isMemberAuthenticated)
+                    {
+                        <a class="px-3 py-2 text-base font-medium @(isPanelPage ? "text-[#0369a1] font-semibold active" : "text-gray-800")" asp-area="Member" asp-controller="Panel" asp-action="Index">لوحتي</a>
+                    }
+                    <a class="px-3 py-2 text-base font-medium @(isAboutPage ? "text-[#0369a1] font-semibold active" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="About">من نحن</a>
+                    <a class="px-3 py-2 text-base font-medium @(isContactPage ? "text-[#0369a1] font-semibold active" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Contact">تواصل</a>
+                </div>
+
+                <div class="flex items-center space-x-4 space-x-reverse">
+                    <div class="flex items-center space-x-2 space-x-reverse md:hidden">
+                        <button id="mobile-menu-btn" class="p-2 rounded-md focus:outline-none">
+                            <i class="fas fa-bars text-[#0369a1] text-2xl transition-transform duration-300 hover:rotate-[15deg]"></i>
+                        </button>
+                    </div>
+
+                    <div class="hidden md:block">
+                        <input id="desktop-store-search" type="search" placeholder="ابحث..." class="custom-search-input px-4 py-2 rounded-full border border-gray-300 text-sm font-medium" />
+                    </div>
+
+                    <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="cart-icon text-gray-700 text-xl" title="عربة التسوق">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-badge js-cart-count">@cartCount</span>
+                    </a>
 
                     @if (isMemberAuthenticated)
                     {
-                        <span class="rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700">حساب المستخدم: @(string.IsNullOrWhiteSpace(memberName) ? "Member" : memberName)</span>
-                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">الرئيسية</a>
-                        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                        <details class="hidden md:block relative group">
+                            <summary class="list-none cursor-pointer rounded-full border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:border-[#0369a1] hover:text-[#0369a1]">
+                                @(string.IsNullOrWhiteSpace(memberName) ? "حسابي" : memberName)
+                            </summary>
+                            <div class="absolute left-0 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                                <a asp-area="Member" asp-controller="Panel" asp-action="Index" class="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">لوحة التحكم</a>
+                                <a asp-area="Member" asp-controller="Panel" asp-action="Orders" class="mt-1 block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">طلباتي</a>
+                                <a asp-area="Member" asp-controller="Panel" asp-action="Favorites" class="mt-1 block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">المتابعة</a>
+                                <a asp-area="Member" asp-controller="Panel" asp-action="Profile" class="mt-1 block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">الملف الشخصي</a>
+                                <a asp-area="Member" asp-controller="Home" asp-action="Index" class="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">الرئيسية</a>
+                                <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="mt-1 block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">العربة</a>
+                                <form asp-area="Member" asp-controller="Account" asp-action="Logout" method="post" class="mt-2">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700">تسجيل الخروج</button>
+                                </form>
+                            </div>
+                        </details>
+                    }
+                    else
+                    {
+                        <div class="hidden md:flex items-center space-x-3 space-x-reverse">
+                            <a class="tw-login-btn text-white px-4 py-2 rounded-full text-sm font-medium" asp-area="Member" asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden bg-white">
+            <div class="px-4 py-4 border-b border-gray-200 text-center">
+                <img src="https://api.dicebear.com/7.x/initials/svg?seed=@(string.IsNullOrWhiteSpace(memberName) ? "Guest" : memberName)&backgroundColor=0369a1&textColor=ffffff"
+                     class="rounded-full w-16 h-16 mx-auto mb-2" alt="User" />
+                <h6 class="text-[#0369a1] font-semibold text-lg mb-1">@(string.IsNullOrWhiteSpace(memberName) ? "زائر" : memberName)</h6>
+                <small class="text-gray-500 block truncate max-w-[200px] mx-auto text-sm">
+                    @(isMemberAuthenticated ? "مرحبًا بك" : "غير مسجل الدخول")
+                </small>
+            </div>
+
+            <div class="p-4 space-y-4">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input id="mobile-store-search" type="search" placeholder="ابحث عن منتج..." class="custom-search-input w-full pl-10 pr-4 py-2 rounded-full text-sm font-medium" />
+                </div>
+
+                <div class="space-y-2">
+                    <a class="flex items-center px-3 py-2 font-medium text-base @(isHomePage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Index">
+                        <i class="fas fa-home ml-3 text-[#0369a1] text-sm"></i>
+                        الرئيسية
+                    </a>
+                    <a class="flex items-center px-3 py-2 font-medium text-base @(isHomePage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Index" asp-fragment="product1">
+                        <i class="fas fa-store ml-3 text-[#0369a1] text-sm"></i>
+                        تسوق
+                    </a>
+                    @if (isMemberAuthenticated)
+                    {
+                        <a class="flex items-center px-3 py-2 font-medium text-base @(isPanelPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Panel" asp-action="Index">
+                            <i class="fas fa-chart-pie ml-3 text-[#0369a1] text-sm"></i>
+                            لوحتي
+                        </a>
+                        <a class="flex items-center px-3 py-2 font-medium text-base @(isOrdersPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Panel" asp-action="Orders">
+                            <i class="fas fa-bag-shopping ml-3 text-[#0369a1] text-sm"></i>
+                            طلباتي
+                        </a>
+                        <a class="flex items-center px-3 py-2 font-medium text-base @(isFavoritesPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Panel" asp-action="Favorites">
+                            <i class="fas fa-heart ml-3 text-[#0369a1] text-sm"></i>
+                            المتابعة
+                        </a>
+                        <a class="flex items-center px-3 py-2 font-medium text-base @(isProfilePage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Panel" asp-action="Profile">
+                            <i class="fas fa-user-gear ml-3 text-[#0369a1] text-sm"></i>
+                            الملف الشخصي
+                        </a>
+                    }
+                    <a class="flex items-center px-3 py-2 font-medium text-base @(isAboutPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="About">
+                        <i class="fas fa-info-circle ml-3 text-[#0369a1] text-sm"></i>
+                        من نحن
+                    </a>
+                    <a class="flex items-center px-3 py-2 font-medium text-base @(isContactPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Contact">
+                        <i class="fas fa-envelope ml-3 text-[#0369a1] text-sm"></i>
+                        تواصل
+                    </a>
+                    <a class="flex items-center px-3 py-2 font-medium text-base @(isCartPage ? "text-[#0369a1] font-semibold" : "text-gray-800")" asp-area="Member" asp-controller="Home" asp-action="Cart">
+                        <i class="fas fa-shopping-cart ml-3 text-[#0369a1] text-sm"></i>
+                        العربة (<span class="js-cart-count">@cartCount</span>)
+                    </a>
+                </div>
+
+                <hr class="my-4 border-gray-200" />
+
+                <div class="space-y-2">
+                    @if (isMemberAuthenticated)
+                    {
+                        <form asp-area="Member" asp-controller="Account" asp-action="Logout" method="post">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-white shadow-sm transition hover:bg-rose-700">تسجيل الخروج</button>
+                            <button type="submit" class="w-full flex items-center text-gray-800 hover:text-[#0369a1] px-3 py-2 font-medium text-base">
+                                <i class="fas fa-sign-out-alt ml-3 text-[#0369a1]"></i>
+                                تسجيل الخروج
+                            </button>
                         </form>
                     }
                     else
                     {
-                        <a asp-area="" asp-controller="Account" asp-action="Register" class="rounded-xl bg-brand-700 px-4 py-2 text-white shadow-sm transition hover:bg-brand-900">إنشاء حساب</a>
-                        <a asp-area="" asp-controller="Account" asp-action="Login" class="rounded-xl border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-brand-500 hover:text-brand-700">تسجيل الدخول</a>
+                        <a class="flex items-center text-gray-800 hover:text-[#0369a1] px-3 py-2 font-medium text-base" asp-area="Member" asp-controller="Account" asp-action="Login">
+                            <i class="fas fa-sign-in-alt ml-3 text-[#0369a1]"></i>
+                            تسجيل الدخول
+                        </a>
+                        <a class="flex items-center text-gray-800 hover:text-[#0369a1] px-3 py-2 font-medium text-base" asp-area="Member" asp-controller="Account" asp-action="Register">
+                            <i class="fas fa-user-plus ml-3 text-[#0369a1]"></i>
+                            تسجيل حساب
+                        </a>
                     }
-                </nav>
-            </div>
-        </header>
-
-        <main role="main" class="flex-1 py-10">
-            @RenderBody()
-        </main>
-
-        <footer class="mt-8 border-t border-slate-200/80 bg-white/70 px-4 py-8 backdrop-blur sm:px-6 lg:px-8">
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                    <p class="text-lg font-extrabold text-brand-900">متجر الملابس</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">منصة تسوق ملابس حديثة مع تجربة شراء سريعة وآمنة.</p>
-                </div>
-                <div>
-                    <p class="text-sm font-extrabold text-slate-900">روابط سريعة</p>
-                    <div class="mt-2 space-y-1 text-sm text-slate-600">
-                        <a asp-area="Member" asp-controller="Home" asp-action="Index" class="block transition hover:text-brand-700">الرئيسية</a>
-                        <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="block transition hover:text-brand-700">عربة التسوق</a>
-                        <a asp-area="" asp-controller="Account" asp-action="Login" class="block transition hover:text-brand-700">تسجيل الدخول</a>
-                        <a asp-area="" asp-controller="Account" asp-action="Register" class="block transition hover:text-brand-700">إنشاء حساب</a>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-sm font-extrabold text-slate-900">خدمات المتجر</p>
-                    <div class="mt-2 space-y-1 text-sm text-slate-600">
-                        <p>تصفح حسب الأقسام بسهولة</p>
-                        <p>عربة تسوق ديناميكية وتحديث فوري</p>
-                        <p>منتجات محدثة من لوحة الإدارة</p>
-                    </div>
-                </div>
-                <div>
-                    <p class="text-sm font-extrabold text-slate-900">الدعم</p>
-                    <div class="mt-2 space-y-1 text-sm text-slate-600">
-                        <p>السبت - الخميس: 9 ص - 9 م</p>
-                        <p>support@cloth-store.com</p>
-                        <p>+20 100 000 0000</p>
-                    </div>
                 </div>
             </div>
+        </div>
+    </nav>
 
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-4 text-xs text-slate-500">
-                <p>متجر الملابس &copy; @DateTime.Now.Year. جميع الحقوق محفوظة.</p>
-                <p>Designed for Modern Fashion Shopping</p>
+    <main class="mt-20">
+        @RenderBody()
+    </main>
+
+    <footer class="bg-white text-gray-800 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <img src="~/img/store-logo.svg" alt="شعار المتجر" class="store-logo-img" />
+                        <span class="text-lg font-black text-slate-900">اناقة بلس</span>
+                    </div>
+                    <h4 class="text-lg font-semibold mt-4 mb-4">تواصل معنا</h4>
+                    <p class="text-sm mb-2"><strong>العنوان:</strong>  Portsaid</p>
+                    <p class="text-sm mb-2"><strong>الهاتف:</strong> 0123456789</p>
+                    <p class="text-sm mb-4"><strong>المواعيد:</strong> 10:00 - 20:00, Sat-Thur</p>
+                    <h4 class="text-lg font-semibold mb-4">تابعنا</h4>
+                    <div class="flex space-x-4 space-x-reverse">
+                        <a href="#" class="text-gray-600 hover:text-[#0369a1]"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-[#0369a1]"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-[#0369a1]"><i class="fab fa-whatsapp"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-[#0369a1]"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-600 hover:text-[#0369a1]"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">عن المتجر</h4>
+                    <a class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2" asp-area="Member" asp-controller="Home" asp-action="About">عنّا</a>
+                    <a href="#" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">معلومات الشحن</a>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Privacy" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">سياسة الخصوصية</a>
+                    <a href="#" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">الشروط والأحكام</a>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Contact" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">اتصل بنا</a>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">حسابي</h4>
+                    <a class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2" asp-area="Member" asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
+                    <a class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2" asp-area="Member" asp-controller="Panel" asp-action="Index">لوحة التحكم</a>
+                    <a class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2" asp-area="Member" asp-controller="Home" asp-action="Cart">عرض العربة</a>
+                    <a asp-area="Member" asp-controller="Panel" asp-action="Favorites" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">المتابعة</a>
+                    <a asp-area="Member" asp-controller="Panel" asp-action="Orders" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">تتبع الطلبات</a>
+                    <a asp-area="Member" asp-controller="Panel" asp-action="Profile" class="block text-sm text-gray-600 hover:text-[#0369a1] mb-2">الملف الشخصي</a>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">تطبيق المتجر</h4>
+                    <p class="text-sm mb-4">متاح عبر المتاجر قريبًا</p>
+                    <div class="flex space-x-4 space-x-reverse mb-4">
+                        <span class="inline-flex h-10 w-28 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-500">Google Play</span>
+                        <span class="inline-flex h-10 w-28 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-500">App Store</span>
+                    </div>
+                    <p class="text-sm mb-4">طرق دفع آمنة</p>
+                    <span class="inline-flex h-10 w-40 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-500">Secure Payments</span>
+                </div>
             </div>
-        </footer>
-    </div>
+
+            <div class="mt-8 text-center">
+                <p class="text-sm">© @DateTime.Now.Year, Ecommerce App - Clothes Store</p>
+            </div>
+        </div>
+    </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const backdrop = document.getElementById('mobile-menu-backdrop');
+            const body = document.body;
+            const desktopSearch = document.getElementById('desktop-store-search');
+            const mobileSearch = document.getElementById('mobile-store-search');
+            let isMenuOpen = false;
+
+            function emitStoreSearch(term) {
+                document.dispatchEvent(new CustomEvent('store-search', {
+                    detail: { term: term || '' }
+                }));
+            }
+
+            function syncSearch(source, target) {
+                if (!source) return;
+                source.addEventListener('input', function () {
+                    if (target && target.value !== source.value) {
+                        target.value = source.value;
+                    }
+                    emitStoreSearch(source.value);
+                });
+            }
+
+            function toggleMenu() {
+                if (!mobileMenu || !backdrop) return;
+                isMenuOpen = !isMenuOpen;
+                mobileMenu.classList.toggle('hidden', !isMenuOpen);
+                backdrop.classList.toggle('hidden', !isMenuOpen);
+
+                setTimeout(() => {
+                    mobileMenu.classList.toggle('active', isMenuOpen);
+                    backdrop.classList.toggle('active', isMenuOpen);
+                    body.style.overflow = isMenuOpen ? 'hidden' : '';
+                }, 10);
+            }
+
+            if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleMenu);
+            if (backdrop) backdrop.addEventListener('click', toggleMenu);
+
+            const menuLinks = document.querySelectorAll('#mobile-menu a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (isMenuOpen) toggleMenu();
+                });
+            });
+
+            syncSearch(desktopSearch, mobileSearch);
+            syncSearch(mobileSearch, desktopSearch);
+
+            setTimeout(() => {
+                const loading = document.getElementById('loading');
+                if (loading) loading.classList.add('hidden');
+            }, 500);
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && isMenuOpen) {
+                    toggleMenu();
+                }
+            });
+        });
+    </script>
+
+    <script>
+        (function () {
+            function getToken() {
+                var tokenInput =
+                    document.querySelector('#memberFavoriteAntiForgery input[name="__RequestVerificationToken"]') ||
+                    document.querySelector('#ajaxAntiForgeryTemplate input[name="__RequestVerificationToken"]') ||
+                    document.querySelector('input[name="__RequestVerificationToken"]');
+
+                return tokenInput ? tokenInput.value : '';
+            }
+
+            function setFavoriteButtonState(button, isTracked) {
+                if (!button) return;
+
+                button.dataset.isTracked = String(!!isTracked);
+                button.setAttribute('aria-pressed', isTracked ? 'true' : 'false');
+                button.setAttribute('title', isTracked ? 'إلغاء المتابعة' : 'متابعة المنتج');
+                button.classList.toggle('is-tracked', !!isTracked);
+
+                var icon = button.querySelector('i');
+                if (icon) {
+                    icon.className = isTracked ? 'fas fa-heart' : 'far fa-heart';
+                }
+            }
+
+            async function toggleFavorite(productId, returnUrl) {
+                var token = getToken();
+                var formData = new FormData();
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+
+                formData.append('productId', productId);
+                if (returnUrl) {
+                    formData.append('returnUrl', returnUrl);
+                }
+
+                try {
+                    var response = await fetch('/Member/Panel/ToggleFavorite', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+
+                    return await response.json();
+                } catch {
+                    return {
+                        success: false,
+                        message: 'تعذر الاتصال بالخادم حالياً.'
+                    };
+                }
+            }
+
+            window.memberStore = window.memberStore || {};
+            window.memberStore.toggleFavorite = toggleFavorite;
+            window.memberStore.setFavoriteButtonState = setFavoriteButtonState;
+        })();
+    </script>
+
+    <script>
+        (function () {
+            const toastContainer = document.getElementById('memberToastContainer');
+            if (!toastContainer) return;
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function hideToast(id) {
+                const notification = document.getElementById(id);
+                if (!notification) return;
+
+                notification.classList.remove('show');
+                notification.classList.add('hide');
+                setTimeout(() => notification.remove(), 450);
+            }
+
+            function showToast(isSuccess, message) {
+                const safeMessage = (message || '').toString().trim();
+                if (!safeMessage) return;
+
+                const notificationId = 'notification-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+                const notificationClass = isSuccess ? 'success' : 'error';
+                const iconClass = isSuccess ? 'fa-check-circle' : 'fa-exclamation-circle';
+                const duration = isSuccess ? 3000 : 5000;
+
+                const notificationHTML = `
+                    <div id="${notificationId}" class="notification ${notificationClass}">
+                        <i class="fas ${iconClass} notification-icon"></i>
+                        <span class="notification-message">${escapeHtml(safeMessage)}</span>
+                        <button type="button" class="notification-close" data-hide-id="${notificationId}" aria-label="إغلاق">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="notification-progress">
+                            <div class="notification-progress-bar"></div>
+                        </div>
+                    </div>
+                `;
+
+                toastContainer.insertAdjacentHTML('afterbegin', notificationHTML);
+                const notification = document.getElementById(notificationId);
+                const progressBar = notification?.querySelector('.notification-progress-bar');
+
+                setTimeout(() => {
+                    notification?.classList.add('show');
+                }, 50);
+
+                setTimeout(() => {
+                    hideToast(notificationId);
+                }, duration);
+
+                notification?.addEventListener('mouseenter', () => {
+                    if (progressBar) progressBar.style.animationPlayState = 'paused';
+                });
+
+                notification?.addEventListener('mouseleave', () => {
+                    if (progressBar) progressBar.style.animationPlayState = 'running';
+                });
+            }
+
+            toastContainer.addEventListener('click', function (event) {
+                const closeBtn = event.target.closest('[data-hide-id]');
+                if (!closeBtn) return;
+                const id = closeBtn.getAttribute('data-hide-id');
+                if (id) hideToast(id);
+            });
+
+            window.showNotification = showToast;
+            window.hideNotification = hideToast;
+
+            const flashMessages = @Html.Raw(memberFlashMessagesJson);
+            if (Array.isArray(flashMessages)) {
+                flashMessages.forEach(item => {
+                    if (!item || !item.message) return;
+                    showToast(!(item.isError), item.message);
+                });
+            }
+        })();
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

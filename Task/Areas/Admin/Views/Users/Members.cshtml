@@ -1,35 +1,54 @@
-@model List<DataAccess.Models.Entities.Member>
+@model List<Core.Domain.Entities.Member>
 @{
-    ViewData["Title"] = "المستخدمين";
+    ViewData["Title"] = "عرض الأعضاء";
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
 }
 
-<section class="space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-3xl font-extrabold text-slate-900">المستخدمين</h1>
+<section class="space-y-5">
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM3 20a7 7 0 0 1 14 0" />
+            </svg>
+            عرض الأعضاء
+        </h1>
+        <hr class="header-divider mt-3 border-slate-200" />
     </div>
 
-    @if (TempData["UserAction"] is string msg)
-    {
-        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
-    }
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <form method="get" asp-area="Admin" asp-controller="Users" asp-action="Members" class="space-y-2">
+            <label for="usersSearch" class="mb-1 block text-[11px] font-bold tracking-[0.18em] text-slate-500">بحث</label>
+            <div class="grid gap-2 md:grid-cols-2">
+                <input id="usersSearch"
+                       name="searchTerm"
+                       value="@searchTerm"
+                       type="search"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100"
+                       placeholder="ابحث بالاسم أو البريد..." />
+                <div class="flex items-center justify-end gap-2">
+                    <button type="submit" class="rounded-xl bg-admin-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-800">بحث</button>
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Members" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">إلغاء</a>
+                </div>
+            </div>
+        </form>
+    </div>
 
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-slate-600">
+        <table id="usersTable" class="admin-table text-sm">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-right font-bold">الاسم</th>
-                    <th class="px-4 py-3 text-right font-bold">البريد الإلكتروني</th>
-                    <th class="px-4 py-3 text-right font-bold">الحالة</th>
-                    <th class="px-4 py-3 text-right font-bold">الصلاحية</th>
-                    <th class="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
-                    <th class="px-4 py-3 text-right font-bold">الإجراءات</th>
+                    <th class="px-4 py-3 font-bold">الاسم</th>
+                    <th class="px-4 py-3 font-bold">البريد الإلكتروني</th>
+                    <th class="px-4 py-3 font-bold">الحالة</th>
+                    <th class="px-4 py-3 font-bold">تاريخ الإنشاء</th>
+                    <th class="px-4 py-3 font-bold">الإجراءات</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @if (Model.Count == 0)
                 {
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-slate-500">لا يوجد مستخدمون حاليا.</td>
+                        <td colspan="5" class="px-4 py-10 text-center font-semibold text-slate-500">لا يوجد أعضاء حالياً.</td>
                     </tr>
                 }
                 else
@@ -42,38 +61,45 @@
                             <td class="px-4 py-3">
                                 @if (user.IsActive)
                                 {
-                                    <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Active</span>
+                                    <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">مفعّل</span>
                                 }
                                 else
                                 {
-                                    <span class="rounded-full bg-rose-50 px-2 py-1 text-xs font-bold text-rose-700">Blocked</span>
+                                    <span class="rounded-full bg-red-50 px-2 py-1 text-xs font-bold text-red-700">غير مفعّل</span>
                                 }
                             </td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">User</span>
+                            <td class="px-4 py-3 text-center text-slate-600">
+                                <span class="mx-auto block w-fit admin-stat-number">@user.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600">@user.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                             <td class="px-4 py-3">
-                                <form asp-area="Admin" asp-controller="Users" asp-action="ToggleBlock" method="post" class="inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    @if (user.IsActive)
-                                    {
-                                        <button type="submit" title="حظر" aria-label="حظر" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 text-rose-700 transition hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.5 10.5V8a4.5 4.5 0 0 0-9 0v2.5M6.75 10.5h10.5A1.25 1.25 0 0 1 18.5 11.75v7A1.25 1.25 0 0 1 17.25 20h-10.5A1.25 1.25 0 0 1 5.5 18.75v-7A1.25 1.25 0 0 1 6.75 10.5Z" />
+                                <div class="mx-auto flex w-fit items-center gap-2">
+                                    <a asp-area="Admin"
+                                       asp-controller="Users"
+                                       asp-action="EditMember"
+                                       asp-route-id="@user.Id"
+                                       class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition"
+                                       title="تعديل العضو"
+                                       aria-label="تعديل العضو">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
+                                        </svg>
+                                    </a>
+
+                                    <form asp-area="Admin" asp-controller="Users" asp-action="DeleteMember" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button type="button"
+                                                data-delete-trigger
+                                                data-delete-message="هل تريد حذف هذا العضو نهائياً؟"
+                                                class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-300 text-red-700 transition"
+                                                title="حذف العضو"
+                                                aria-label="حذف العضو">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6h18M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6m-8 0h8m-7 3v9m3-9v9m3-9v9M5 6l1 14.25A1.75 1.75 0 0 0 7.75 22h8.5A1.75 1.75 0 0 0 18 20.25L19 6" />
                                             </svg>
                                         </button>
-                                    }
-                                    else
-                                    {
-                                        <button type="submit" title="فك الحظر" aria-label="فك الحظر" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-300 text-emerald-700 transition hover:bg-emerald-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 10.5V8a3 3 0 1 0-6 0m-2.25 2.5h10.5A1.25 1.25 0 0 1 18.5 11.75v7A1.25 1.25 0 0 1 17.25 20h-10.5A1.25 1.25 0 0 1 5.5 18.75v-7A1.25 1.25 0 0 1 6.75 10.5Z" />
-                                            </svg>
-                                        </button>
-                                    }
-                                </form>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }

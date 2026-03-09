@@ -1,0 +1,77 @@
+﻿@model List<global::Core.Application.Members.Models.MemberOrderListItemVm>
+@{
+    string OrderBadge(string status)
+    {
+        var normalized = status?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (normalized is "paid" or "completed") return "member-order-badge paid";
+        if (normalized is "pending" or "processing") return "member-order-badge pending";
+        if (normalized == "shipped") return "member-order-badge shipped";
+        if (normalized is "cancelled" or "failed") return "member-order-badge cancelled";
+        return "member-order-badge";
+    }
+}
+
+<section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        @await Html.PartialAsync("_PanelSideNav")
+
+        <div class="space-y-6">
+            <section class="member-surface rounded-3xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="member-chip">سجل الشراء</span>
+                        <h1 class="mt-4 text-3xl font-black text-slate-900">طلباتي</h1>
+                        <p class="mt-2 text-sm font-semibold leading-8 text-slate-600">تابع حالات الطلبات وتفاصيل كل عملية شراء من حسابك.</p>
+                    </div>
+                    <a asp-area="Member" asp-controller="Home" asp-action="Index" asp-fragment="product1" class="member-btn-primary px-5 py-3 text-sm">متابعة التسوق</a>
+                </div>
+            </section>
+
+            <section class="member-surface rounded-3xl p-5">
+                @if (Model.Count == 0)
+                {
+                    <div class="member-grid-empty px-6 py-12 text-center text-sm font-bold text-slate-500">
+                        لا توجد طلبات مسجلة حتى الآن.
+                    </div>
+                }
+                else
+                {
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-right">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-black uppercase tracking-wide text-slate-500">
+                                    <th class="px-3 py-3">رقم الطلب</th>
+                                    <th class="px-3 py-3">الحالة</th>
+                                    <th class="px-3 py-3">العناصر</th>
+                                    <th class="px-3 py-3">الإجمالي</th>
+                                    <th class="px-3 py-3">تاريخ الإنشاء</th>
+                                    <th class="px-3 py-3">تاريخ الدفع</th>
+                                    <th class="px-3 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model)
+                                {
+                                    <tr class="border-b border-slate-100 text-sm font-bold text-slate-700 last:border-0">
+                                        <td class="px-3 py-4">@order.OrderNumber</td>
+                                        <td class="px-3 py-4"><span class="@OrderBadge(order.Status)">@order.StatusDisplay</span></td>
+                                        <td class="px-3 py-4">@order.ItemsCount</td>
+                                        <td class="px-3 py-4">@order.TotalAmount.ToString("0.00") ج.م</td>
+                                        <td class="px-3 py-4">@order.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy - hh:mm tt")</td>
+                                        <td class="px-3 py-4">@(order.PaidAtUtc.HasValue ? order.PaidAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy - hh:mm tt") : "—")</td>
+                                        <td class="px-3 py-4">
+                                            <a asp-area="Member" asp-controller="Panel" asp-action="OrderDetails" asp-route-id="@order.Id" class="member-btn-outline inline-flex px-4 py-2 text-xs">تفاصيل</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+</section>
+
+
+

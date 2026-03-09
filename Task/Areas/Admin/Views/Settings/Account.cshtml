@@ -1,0 +1,89 @@
+@model global::Task.Areas.Admin.ViewModels.AccountSettingsVm
+@{
+    ViewData["Title"] = "إعدادات الحساب";
+}
+
+<section class="space-y-5">
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-7 8a7 7 0 0 1 14 0" />
+            </svg>
+            إعدادات الحساب
+        </h1>
+        <hr class="header-divider mt-3 border-slate-200" />
+    </div>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <form asp-area="Admin" asp-controller="Settings" asp-action="Account" method="post" class="mx-auto max-w-3xl space-y-4 text-right">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700"></div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <label asp-for="FullName" class="mb-1 block text-sm font-bold text-slate-700">الاسم</label>
+                    <input asp-for="FullName" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100"  style="text-align:end;"/>
+                    <span asp-validation-for="FullName" class="text-xs font-bold text-red-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Email" class="mb-1 block text-sm font-bold text-slate-700">البريد الإلكتروني</label>
+                    <input asp-for="Email" dir="ltr" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" />
+                    <span asp-validation-for="Email" class="text-xs font-bold text-red-600"></span>
+                </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <label asp-for="NewPassword" class="mb-1 block text-sm font-bold text-slate-700">كلمة مرور جديدة (اختياري)</label>
+                    <div class="relative">
+                        <input asp-for="NewPassword" id="AccountNewPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" style="padding-right:2.75rem !important;padding-left:0.75rem !important;" />
+                        <button type="button" data-toggle-target="AccountNewPasswordInput" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" stroke-width="1.8" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span asp-validation-for="NewPassword" class="text-xs font-bold text-red-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="ConfirmNewPassword" class="mb-1 block text-sm font-bold text-slate-700">تأكيد كلمة المرور</label>
+                    <div class="relative">
+                        <input asp-for="ConfirmNewPassword" id="AccountConfirmPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" style="padding-right:2.75rem !important;padding-left:0.75rem !important;" />
+                        <button type="button" data-toggle-target="AccountConfirmPasswordInput" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" stroke-width="1.8" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmNewPassword" class="text-xs font-bold text-red-600"></span>
+                </div>
+            </div>
+
+            <div class="flex justify-center">
+                <button type="submit" class="rounded-lg bg-admin-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-700">حفظ</button>
+            </div>
+        </form>
+    </article>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            document.querySelectorAll("[data-toggle-target]").forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    var input = document.getElementById(btn.getAttribute("data-toggle-target"));
+                    if (!input) return;
+                    var show = input.type === "password";
+                    input.type = show ? "text" : "password";
+                    btn.setAttribute("aria-pressed", show ? "true" : "false");
+                });
+            });
+        })();
+    </script>
+}

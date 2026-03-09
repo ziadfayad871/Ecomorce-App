@@ -1,0 +1,99 @@
+﻿@model global::Core.Application.Members.Models.MemberOrderDetailsVm
+@{
+    string OrderBadge(string status)
+    {
+        var normalized = status?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (normalized is "paid" or "completed") return "member-order-badge paid";
+        if (normalized is "pending" or "processing") return "member-order-badge pending";
+        if (normalized == "shipped") return "member-order-badge shipped";
+        if (normalized is "cancelled" or "failed") return "member-order-badge cancelled";
+        return "member-order-badge";
+    }
+}
+
+<section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        @await Html.PartialAsync("_PanelSideNav")
+
+        <div class="space-y-6">
+            <section class="member-surface rounded-3xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="member-chip">تفاصيل الشراء</span>
+                        <h1 class="mt-4 text-3xl font-black text-slate-900">الطلب @Model.OrderNumber</h1>
+                        <p class="mt-2 text-sm font-semibold leading-8 text-slate-600">راجع تفاصيل المنتجات، إجمالي الفاتورة، وحالة الطلب الحالية.</p>
+                    </div>
+                    <span class="@OrderBadge(Model.Status)">@Model.StatusDisplay</span>
+                </div>
+            </section>
+
+            <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <article class="member-surface rounded-3xl p-5">
+                    <h2 class="text-xl font-black text-slate-900">عناصر الطلب</h2>
+                    <div class="mt-5 overflow-x-auto">
+                        <table class="min-w-full text-right">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs font-black uppercase tracking-wide text-slate-500">
+                                    <th class="px-3 py-3">المنتج</th>
+                                    <th class="px-3 py-3">السعر</th>
+                                    <th class="px-3 py-3">الكمية</th>
+                                    <th class="px-3 py-3">الإجمالي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr class="border-b border-slate-100 text-sm font-bold text-slate-700 last:border-0">
+                                        <td class="px-3 py-4">@item.ProductName</td>
+                                        <td class="px-3 py-4">@item.UnitPrice.ToString("0.00") ج.م</td>
+                                        <td class="px-3 py-4">@item.Quantity</td>
+                                        <td class="px-3 py-4">@item.LineTotal.ToString("0.00") ج.م</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="space-y-6">
+                    <div class="member-surface rounded-3xl p-5">
+                        <h2 class="text-lg font-black text-slate-900">بيانات الطلب</h2>
+                        <dl class="mt-4 space-y-4 text-sm font-bold text-slate-600">
+                            <div class="flex items-center justify-between gap-3">
+                                <dt>اسم العميل</dt>
+                                <dd class="text-slate-900">@Model.CustomerName</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt>البريد الإلكتروني</dt>
+                                <dd class="text-slate-900">@Model.CustomerEmail</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt>تاريخ الإنشاء</dt>
+                                <dd class="text-slate-900">@Model.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy - hh:mm tt")</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt>تاريخ الدفع</dt>
+                                <dd class="text-slate-900">@(Model.PaidAtUtc.HasValue ? Model.PaidAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy - hh:mm tt") : "—")</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-base">
+                                <dt>الإجمالي النهائي</dt>
+                                <dd class="text-brand-700">@Model.TotalAmount.ToString("0.00") ج.م</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div class="member-surface rounded-3xl p-5">
+                        <h2 class="text-lg font-black text-slate-900">إجراءات سريعة</h2>
+                        <div class="mt-4 grid gap-3">
+                            <a asp-area="Member" asp-controller="Panel" asp-action="Orders" class="member-btn-outline px-4 py-3 text-center text-sm">العودة للطلبات</a>
+                            <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="member-btn-outline px-4 py-3 text-center text-sm">فتح العربة</a>
+                            <a asp-area="Member" asp-controller="Home" asp-action="Contact" class="member-btn-primary px-4 py-3 text-center text-sm">تواصل مع الدعم</a>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </div>
+</section>
+
+

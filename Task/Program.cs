@@ -1,18 +1,15 @@
 using DataAccess.Data;
 using DataAccess.Data.Seed;
+using DataAccess.Extensions;
 using DataAccess.Models.Identity;
-using DataAccess.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Task.Contracts;
-using Task.Repositories;
-using YourApp.Repositories;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -33,16 +30,16 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opt =>
 
 builder.Services.ConfigureApplicationCookie(opt =>
 {
-    opt.LoginPath = "/Account/Login";
-    opt.AccessDeniedPath = "/Account/Login";
+    opt.LoginPath = "/Admin/Account/Login";
+    opt.AccessDeniedPath = "/Admin/Account/Login";
 });
 
 
 builder.Services.AddAuthentication()
     .AddCookie("MemberCookie", opt =>
     {
-        opt.LoginPath = "/Account/Login";
-        opt.AccessDeniedPath = "/Account/Login";
+        opt.LoginPath = "/Member/Account/Login";
+        opt.AccessDeniedPath = "/Member/Account/Login";
     })
     .AddGoogle("Google", opt =>
     {
@@ -55,14 +52,7 @@ builder.Services.AddAuthentication()
         opt.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
     });
 
-// Repositories
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-
-// Services
-builder.Services.AddScoped<MemberAuthService>();
-builder.Services.AddScoped<ImageService>();
+builder.Services.AddDataAccessServices();
 
 var app = builder.Build();
 
@@ -90,8 +80,12 @@ app.MapControllerRoute(
 // Seed Admin
 using (var scope = app.Services.CreateScope())
 {
-    await IdentitySeeder.SeedAsync(scope.ServiceProvider);
-    await StoreSeeder.SeedAsync(scope.ServiceProvider);
+    var services = scope.ServiceProvider;
+    var db = services.GetRequiredService<ApplicationDbContext>();
+    await db.Database.MigrateAsync();
+    await IdentitySeeder.SeedAsync(services);
+    await StoreSeeder.SeedAsync(services);
 }
 
 app.Run();
+

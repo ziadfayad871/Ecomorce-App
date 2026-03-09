@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using Core.Application.Common.Identity;
 using DataAccess.Models.Identity;
-using DataAccess.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,12 +16,12 @@ namespace Task.Controllers
         private const string MicrosoftScheme = "Microsoft";
         private readonly UserManager<ApplicationUser> _userMgr;
         private readonly SignInManager<ApplicationUser> _signInMgr;
-        private readonly MemberAuthService _memberAuth;
+        private readonly IMemberAuthService _memberAuth;
 
         public AccountController(
             UserManager<ApplicationUser> userMgr,
             SignInManager<ApplicationUser> signInMgr,
-            MemberAuthService memberAuth)
+            IMemberAuthService memberAuth)
         {
             _userMgr = userMgr;
             _signInMgr = signInMgr;

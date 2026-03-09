@@ -1,53 +1,205 @@
-﻿@model List<DataAccess.Models.Entities.Category>
+@using System.Globalization
+@model List<Core.Domain.Entities.Category>
 @{
-    ViewData["Title"] = "التصنيفات";
+    ViewData["Title"] = "الأقسام";
+    var productCounts = ViewBag.ProductCounts as Dictionary<int, int> ?? new Dictionary<int, int>();
+    var generatedAt = DateTime.Now;
 }
 
-<section class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <h1 class="text-2xl font-extrabold text-slate-900">التصنيفات</h1>
-        <a asp-area="Admin" asp-controller="Categories" asp-action="Create" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إضافة تصنيف جديد</a>
-    </div>
-
-    @if (TempData["CategoryAction"] is string msg)
-    {
-        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
+<style>
+    .categories-print-sheet {
+        display: none;
     }
 
+    .categories-print-sheet .sheet {
+        color: #0f172a;
+        font-size: 12px;
+    }
+
+    .categories-print-sheet h2 {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .categories-print-sheet .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        margin-bottom: 12px;
+        color: #334155;
+        font-size: 12px;
+    }
+
+    .categories-print-sheet table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .categories-print-sheet th,
+    .categories-print-sheet td {
+        border: 1px solid #cbd5e1;
+        padding: 7px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .categories-print-sheet thead th {
+        background: #e2e8f0;
+        font-weight: 800;
+    }
+
+    @@media print {
+        @@page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        body * {
+            visibility: hidden !important;
+        }
+
+        #categoriesPrintSheet,
+        #categoriesPrintSheet * {
+            visibility: visible !important;
+        }
+
+        #categoriesPrintSheet {
+            display: block !important;
+            position: fixed;
+            inset: 0;
+            background: #fff;
+        }
+
+        #categoriesPrintSheet .sheet {
+            padding: 0;
+            margin: 0;
+        }
+    }
+</style>
+
+<section class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+            </svg>
+            إدارة الأقسام
+        </h1>
+
+        <div class="mr-auto flex items-center gap-2">
+            <button type="button"
+                    onclick="printCategoriesInPage()"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700"
+                    title="طباعة الأقسام الحالية">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8V4h10v4M6 17H4a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2m-8 0h4m-6 3h8a1 1 0 0 0 1-1v-5H9v5a1 1 0 0 0 1 1Z" />
+                </svg>
+                طباعة
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Categories"
+               asp-action="ExportExcel"
+               class="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
+               title="تصدير الأقسام إلى Excel">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-8 0H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m-1 4-2 10m6-10 2 10M8 12h8" />
+                </svg>
+                تصدير Excel
+            </a>
+
+            <a asp-area="Admin" asp-controller="Categories" asp-action="Create" class="inline-flex items-center gap-1.5 rounded-md bg-admin-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                </svg>
+                إضافة قسم
+            </a>
+        </div>
+
+        <hr class="header-divider w-full border-slate-200" />
+    </div>
+
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-slate-600">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 text-xs">
+            <span class="font-bold text-slate-600">إجمالي الأقسام: <span class="admin-stat-number">@Model.Count</span></span>
+            <div class="flex items-center gap-2" dir="ltr">
+                <span class="font-bold text-slate-600">عدد الصفوف</span>
+                <select id="categoriesRowsPerPage" class="rounded-md border border-slate-300 px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-admin-500">
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="75">75</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+
+        <table id="categoriesTable" class="admin-table text-sm">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-right font-bold">الاسم</th>
-                    <th class="px-4 py-3 text-right font-bold">الإجراء</th>
+                    <th class="px-4 py-3 font-bold">الاسم</th>
+                    <th class="px-4 py-3 font-bold">عدد المنتجات</th>
+                    <th class="px-4 py-3 font-bold">عرض المنتجات</th>
+                    <th class="px-4 py-3 font-bold">الإجراءات</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @if (Model.Count == 0)
                 {
                     <tr>
-                        <td colspan="2" class="px-4 py-8 text-center text-slate-500">لا توجد تصنيفات حالياً.</td>
+                        <td colspan="4" class="px-4 py-10 text-center font-semibold text-slate-500">لا توجد أقسام حالياً.</td>
                     </tr>
                 }
                 else
                 {
-                    @foreach (var c in Model)
+                    @foreach (var category in Model)
                     {
-                        <tr>
-                            <td class="px-4 py-3 font-semibold text-slate-800">@c.Name</td>
+                        var count = productCounts.TryGetValue(category.Id, out var total) ? total : 0;
+                        <tr data-page-row>
+                            <td class="px-4 py-3 font-semibold text-slate-800">@category.Name</td>
+                            <td class="px-4 py-3 admin-stat-number text-slate-700">@count</td>
                             <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <a asp-area="Admin" asp-controller="Categories" asp-action="Edit" asp-route-id="@c.Id" title="تعديل" aria-label="تعديل" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-admin-300 text-admin-700 transition hover:bg-admin-50">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <a asp-area="Admin"
+                                   asp-controller="Categories"
+                                   asp-action="SectionProducts"
+                                   asp-route-id="@category.Id"
+                                   class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-admin-300 text-admin-700 transition"
+                                   title="عرض المنتجات"
+                                   aria-label="عرض المنتجات">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.5 12S6.5 5.5 12 5.5 21.5 12 21.5 12 17.5 18.5 12 18.5 2.5 12 2.5 12Z" />
+                                        <circle cx="12" cy="12" r="3" stroke-width="1.8" />
+                                    </svg>
+                                </a>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="mx-auto flex w-fit items-center gap-2">
+                                    <a asp-area="Admin"
+                                       asp-controller="Categories"
+                                       asp-action="Edit"
+                                       asp-route-id="@category.Id"
+                                       class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition"
+                                       title="تعديل القسم"
+                                       aria-label="تعديل القسم">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
                                         </svg>
                                     </a>
 
-                                    <form asp-area="Admin" asp-controller="Categories" asp-action="Delete" method="post" class="inline" onsubmit="return confirm('حذف هذا التصنيف؟');">
+                                    <form asp-area="Admin" asp-controller="Categories" asp-action="Delete" method="post" class="inline">
                                         @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@c.Id" />
-                                        <button type="submit" title="حذف" aria-label="حذف" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-300 text-rose-700 transition hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <input type="hidden" name="id" value="@category.Id" />
+                                        <button type="button"
+                                                data-delete-trigger
+                                                data-delete-message="هل تريد حذف هذا القسم؟"
+                                                class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-300 text-red-700 transition"
+                                                title="حذف القسم"
+                                                aria-label="حذف القسم">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 6h18M8 6V4.75A1.75 1.75 0 0 1 9.75 3h4.5A1.75 1.75 0 0 1 16 4.75V6m-8 0h8m-7 3v9m3-9v9m3-9v9M5 6l1 14.25A1.75 1.75 0 0 0 7.75 22h8.5A1.75 1.75 0 0 0 18 20.25L19 6" />
                                             </svg>
                                         </button>
@@ -59,5 +211,134 @@
                 }
             </tbody>
         </table>
+
+        <div class="flex flex-wrap items-center justify-center gap-2 border-t border-slate-200 px-3 py-2 text-xs">
+            <div id="categoriesPagination" class="flex items-center gap-1"></div>
+        </div>
     </div>
 </section>
+
+<div id="categoriesPrintSheet" class="categories-print-sheet" aria-hidden="true">
+    <div class="sheet">
+        <h2>تقرير الأقسام</h2>
+        <div class="meta">
+            <span>إجمالي الأقسام: @Model.Count</span>
+            <span>تاريخ الطباعة: @generatedAt.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>القسم</th>
+                    <th>عدد المنتجات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="2">لا توجد أقسام حالياً.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var category in Model.OrderBy(x => x.Name))
+                    {
+                        var count = productCounts.TryGetValue(category.Id, out var total) ? total : 0;
+                        <tr>
+                            <td>@category.Name</td>
+                            <td>@count</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function printCategoriesInPage() {
+            window.print();
+        }
+
+        (function () {
+            var table = document.getElementById("categoriesTable");
+            if (!table) return;
+
+            var rows = Array.from(table.querySelectorAll("tbody tr[data-page-row]"));
+            var rowsPerPage = document.getElementById("categoriesRowsPerPage");
+            var pagination = document.getElementById("categoriesPagination");
+            var state = { page: 1, size: 25 };
+
+            function pagerButton(label, disabled, active, click) {
+                var button = document.createElement("button");
+                button.type = "button";
+                button.textContent = label;
+                button.disabled = disabled;
+                button.className = "inline-flex h-8 min-w-[32px] items-center justify-center rounded-md border px-2 text-xs font-bold transition " +
+                    (active ? "border-admin-600 bg-admin-600 text-white underline decoration-2 underline-offset-4" : "border-slate-300 bg-white text-slate-700 hover:border-admin-300 hover:text-admin-700 hover:underline") +
+                    (disabled ? " cursor-not-allowed opacity-50" : "");
+
+                if (!disabled) {
+                    button.addEventListener("click", click);
+                }
+
+                return button;
+            }
+
+            function drawPagination(totalPages) {
+                pagination.innerHTML = "";
+                if (totalPages <= 1) return;
+
+                pagination.appendChild(pagerButton("السابق", state.page <= 1, false, function () {
+                    state.page--;
+                    render();
+                }));
+
+                var start = Math.max(1, state.page - 2);
+                var end = Math.min(totalPages, start + 4);
+                if (end - start < 4) {
+                    start = Math.max(1, end - 4);
+                }
+
+                for (var i = start; i <= end; i++) {
+                    (function (page) {
+                        pagination.appendChild(pagerButton(page.toString(), false, state.page === page, function () {
+                            state.page = page;
+                            render();
+                        }));
+                    })(i);
+                }
+
+                pagination.appendChild(pagerButton("التالي", state.page >= totalPages, false, function () {
+                    state.page++;
+                    render();
+                }));
+            }
+
+            function render() {
+                state.size = parseInt(rowsPerPage.value || "25", 10);
+                var total = rows.length;
+                var totalPages = Math.max(1, Math.ceil(total / state.size));
+                if (state.page > totalPages) {
+                    state.page = totalPages;
+                }
+
+                var startIndex = total === 0 ? 0 : (state.page - 1) * state.size;
+                var endIndex = Math.min(startIndex + state.size, total);
+
+                rows.forEach(function (row) { row.classList.add("hidden"); });
+                rows.slice(startIndex, endIndex).forEach(function (row) { row.classList.remove("hidden"); });
+
+                drawPagination(totalPages);
+            }
+
+            rowsPerPage.addEventListener("change", function () {
+                state.page = 1;
+                render();
+            });
+
+            render();
+        })();
+    </script>
+}

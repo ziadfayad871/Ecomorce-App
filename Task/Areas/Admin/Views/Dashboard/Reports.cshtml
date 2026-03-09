@@ -1,0 +1,211 @@
+﻿@using System.Globalization
+@using System.Linq
+@model global::Task.Areas.Admin.ViewModels.DashboardVm
+@{
+    ViewData["Title"] = "تقارير المبيعات";
+    var culture = new CultureInfo("ar-EG");
+    var invariant = CultureInfo.InvariantCulture;
+    string FormatInt(int value) => value.ToString("N0", culture);
+    string FormatMoney(decimal value) => $"{value.ToString("N2", culture)} EGP";
+    var selectedRange = string.IsNullOrWhiteSpace(Model.SelectedRange) ? "30d" : Model.SelectedRange;
+
+    var salesPoints = Model.SalesLast30Days ?? new List<global::Task.Areas.Admin.ViewModels.DailySalesPointVm>();
+    var maxSalesValue = salesPoints.Count == 0 ? 0m : salesPoints.Max(x => x.Total);
+    var hasSalesData = salesPoints.Any(x => x.Total > 0m);
+
+    var statusItems = (Model.OrderStatusDistribution ?? new List<global::Task.Areas.Admin.ViewModels.OrderStatusDistributionVm>())
+        .Where(x => x.Count > 0)
+        .ToList();
+    var totalStatusOrders = statusItems.Sum(x => x.Count);
+    var hasStatusData = totalStatusOrders > 0;
+
+    var donutParts = new List<string>();
+    var donutCursor = 0m;
+    foreach (var item in statusItems)
+    {
+        var nextCursor = Math.Min(100m, donutCursor + item.Percent);
+        donutParts.Add($"{item.ColorHex} {donutCursor.ToString("0.##", invariant)}% {nextCursor.ToString("0.##", invariant)}%");
+        donutCursor = nextCursor;
+    }
+    if (donutCursor < 100m)
+    {
+        donutParts.Add($"#e2e8f0 {donutCursor.ToString("0.##", invariant)}% 100%");
+    }
+    var donutGradient = donutParts.Count > 0
+        ? $"conic-gradient({string.Join(", ", donutParts)})"
+        : "conic-gradient(#e2e8f0 0% 100%)";
+}
+
+<section class="space-y-5 text-right" dir="rtl">
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h1 class="inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 14h4v6H4v-6Zm6-5h4v11h-4V9Zm6-3h4v14h-4V6Z" />
+                </svg>
+                تقارير المبيعات
+            </h1>
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="inline-flex items-center rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">
+                الرجوع للرئيسية
+            </a>
+        </div>
+        <hr class="mt-3 border-slate-200" />
+
+        <form method="get" asp-area="Admin" asp-controller="Dashboard" asp-action="Reports" class="mt-4 grid gap-3 md:grid-cols-4">
+            <div>
+                <label class="mb-1 block text-xs font-bold text-slate-600">الفترة</label>
+                <select name="range" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100">
+                    <option value="today" selected="@(selectedRange == "today" ? "selected" : null)">اليوم</option>
+                    <option value="week" selected="@(selectedRange == "week" ? "selected" : null)">الأسبوع</option>
+                    <option value="month" selected="@(selectedRange == "month" ? "selected" : null)">الشهر</option>
+                    <option value="30d" selected="@(selectedRange == "30d" ? "selected" : null)">آخر 30 يوم</option>
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-bold text-slate-600">من تاريخ</label>
+                <input type="date" name="from" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-bold text-slate-600">إلى تاريخ</label>
+                <input type="date" name="to" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" />
+            </div>
+            <div class="flex items-end justify-end gap-2 md:col-span-4">
+                <button type="submit" class="rounded-xl bg-admin-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-800">تحديث</button>
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Reports" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">إلغاء</a>
+            </div>
+        </form>
+    </article>
+
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-bold text-slate-600">إجمالي المبيعات</p>
+            <p class="admin-stat-number mt-1 text-2xl font-extrabold text-slate-900">@FormatMoney(Model.SalesTotal)</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-bold text-slate-600">مبيعات اليوم</p>
+            <p class="admin-stat-number mt-1 text-2xl font-extrabold text-slate-900">@FormatMoney(Model.SalesToday)</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-bold text-slate-600">متوسط قيمة الطلب</p>
+            <p class="admin-stat-number mt-1 text-2xl font-extrabold text-slate-900">@FormatMoney(Model.AverageOrderValue)</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-bold text-slate-600">إجمالي الطلبات</p>
+            <p class="admin-stat-number mt-1 text-2xl font-extrabold text-slate-900">@FormatInt(Model.OrdersCount)</p>
+        </article>
+    </div>
+
+    <div class="grid gap-5 xl:grid-cols-3">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-admin-800">المبيعات آخر 30 يوم</h2>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                    @(hasSalesData ? "بيانات حقيقية" : "لا توجد مبيعات حتى الآن")
+                </span>
+            </div>
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div class="flex h-44 items-end gap-1.5">
+                    @if (salesPoints.Count == 0)
+                    {
+                        <div class="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">
+                            لا توجد بيانات مبيعات.
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var point in salesPoints)
+                        {
+                            var ratio = maxSalesValue <= 0m ? 0m : (point.Total / maxSalesValue);
+                            var heightPx = maxSalesValue <= 0m ? 8 : Math.Max(8, (int)Math.Round(ratio * 170m));
+                            var opacityValue = maxSalesValue <= 0m ? "0.35" : "1";
+                            var titleText = $"{point.Date:yyyy-MM-dd} - {FormatMoney(point.Total)}";
+                            <span class="group relative h-full flex-1" title="@titleText">
+                                <span class="absolute bottom-0 left-0 right-0 rounded-t-md bg-admin-300 transition hover:bg-admin-500"
+                                      style="height:@(heightPx)px;opacity:@opacityValue"></span>
+                            </span>
+                        }
+                    }
+                </div>
+                <div class="mt-2 flex justify-between text-[11px] font-bold text-slate-500">
+                    <span>قبل 30 يوم</span>
+                    <span>اليوم</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-admin-800">توزيع الطلبات حسب الحالة</h2>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                    @(hasStatusData ? $"{FormatInt(totalStatusOrders)} طلب" : "لا توجد طلبات")
+                </span>
+            </div>
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div class="relative mx-auto h-40 w-40">
+                    <div class="h-full w-full rounded-full" style="background:@donutGradient;"></div>
+                    <div class="absolute inset-7 rounded-full bg-white"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-center text-xs font-bold text-slate-600">
+                        @if (hasStatusData)
+                        {
+                            <span>@FormatInt(totalStatusOrders)<br />طلب</span>
+                        }
+                        else
+                        {
+                            <span>لا توجد بيانات</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    @foreach (var status in (Model.OrderStatusDistribution ?? new List<global::Task.Areas.Admin.ViewModels.OrderStatusDistributionVm>()))
+                    {
+                        <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                            <span class="inline-flex items-center gap-2">
+                                <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:@status.ColorHex"></span>
+                                @status.Status
+                            </span>
+                            <span class="admin-stat-number">@FormatInt(status.Count) (@status.Percent.ToString("0.#", culture)%)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-3">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-admin-800">أفضل المنتجات مبيعًا</h2>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                    @(Model.TopProducts.Count > 0 ? "بناءً على الطلبات المدفوعة" : "لا توجد بيانات بيع")
+                </span>
+            </div>
+            <div class="grid gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 md:grid-cols-2">
+                @if (Model.TopProducts.Count == 0)
+                {
+                    <div class="md:col-span-2 flex items-center justify-center rounded-xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-500">
+                        لا توجد مبيعات مدفوعة لعرض أفضل المنتجات.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var product in Model.TopProducts)
+                    {
+                        var barWidth = product.Percent <= 0m ? 3m : Math.Min(100m, product.Percent);
+                        <div class="space-y-1 rounded-xl border border-slate-200 bg-white p-3">
+                            <div class="flex items-center justify-between gap-2 text-xs font-bold text-slate-700">
+                                <span class="truncate">@product.ProductName</span>
+                                <span class="admin-stat-number">@product.Percent.ToString("0.#", culture)%</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-200">
+                                <div class="h-full rounded-full bg-admin-500 transition-all duration-700" style="width:@(barWidth.ToString("0.##", invariant))%"></div>
+                            </div>
+                            <div class="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                                <span>الكمية: @FormatInt(product.QuantitySold)</span>
+                                <span class="admin-stat-number">@FormatMoney(product.SalesAmount)</span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </article>
+    </div>
+</section>

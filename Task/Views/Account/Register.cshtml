@@ -1,4 +1,4 @@
-@model global::Task.ViewModels.UnifiedRegisterVm
+﻿@model global::Task.ViewModels.UnifiedRegisterVm
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
@@ -18,15 +18,15 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: {
-                        sans: ["Cairo", "sans-serif"]
-                    },
                     colors: {
                         brand: {
-                            500: "#0ea5e9",
-                            700: "#0369a1",
-                            900: "#0c4a6e"
+                            500: "#0369a1",
+                            600: "#075985",
+                            100: "#e0f2fe"
                         }
+                    },
+                    fontFamily: {
+                        sans: ["Cairo", "sans-serif"]
                     }
                 }
             }
@@ -34,138 +34,230 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 </head>
-<body class="min-h-full bg-slate-100 font-sans text-slate-800 antialiased">
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div class="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-sky-100 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-72 w-72 translate-x-16 translate-y-16 rounded-full bg-cyan-200/70 blur-3xl"></div>
-    </div>
-
-    <div class="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-10 sm:px-6 lg:px-8">
-        <main class="flex flex-1 items-center">
-            <div class="grid w-full gap-6 md:grid-cols-[1.2fr_1fr]">
-                <section class="hidden rounded-3xl bg-gradient-to-br from-brand-900 via-brand-700 to-cyan-500 p-8 text-white md:flex md:flex-col md:justify-between">
-                    <div>
-                        <p class="text-xs font-bold tracking-[0.35em] text-cyan-100">WELCOME</p>
-                        <h1 class="mt-4 text-4xl font-extrabold leading-tight">إنشاء حساب مستخدم</h1>
-                        <p class="mt-4 text-sm leading-7 text-cyan-100">
-                            سجل حسابك بالطريقة اللي تناسبك:
-                            بريد إلكتروني وكلمة مرور أو Google أو Microsoft.
-                        </p>
-                    </div>
-                    <p class="text-sm text-cyan-100"></p>
-                </section>
-
-                <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-                    <h2 class="text-2xl font-extrabold text-slate-900">تسجيل مستخدم جديد</h2>
-                    <p class="mt-2 text-sm text-slate-500">املأ البيانات التالية لإنشاء حسابك.</p>
-
-                    @if (TempData["LoginError"] is string extErr)
-                    {
-                        <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">@extErr</div>
-                    }
-
-                    <form asp-action="Register" method="post" class="mt-6 space-y-4">
-                        <input asp-for="ReturnUrl" type="hidden" />
-                        <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
-
-                        <div>
-                            <label asp-for="FullName" class="mb-1 block text-sm font-bold text-slate-700">الاسم الكامل</label>
-                            <input asp-for="FullName" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="اكتب اسمك بالكامل" />
-                            <span asp-validation-for="FullName" class="mt-1 block text-xs font-semibold text-rose-600"></span>
-                        </div>
-
-                        <div>
-                            <label asp-for="Email" class="mb-1 block text-sm font-bold text-slate-700">البريد الإلكتروني</label>
-                            <input asp-for="Email" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="name@example.com" />
-                            <span asp-validation-for="Email" class="mt-1 block text-xs font-semibold text-rose-600"></span>
-                        </div>
-
-                        <div>
-                            <label asp-for="Password" class="mb-1 block text-sm font-bold text-slate-700">كلمة المرور</label>
-                            <div class="relative">
-                                <input asp-for="Password" id="UnifiedRegisterPasswordInput" type="password" dir="ltr" class="w-full rounded-xl border border-slate-300 px-4 py-3 pl-12 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-sky-100" placeholder="6 أحرف على الأقل" />
-                                <button type="button" data-toggle-target="UnifiedRegisterPasswordInput" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
-                                    <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-                                    </svg>
-                                    <svg data-eye-closed xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3l18 18" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.584 10.587a2.25 2.25 0 1 0 3.182 3.182" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.88 5.09A10.477 10.477 0 0 1 12 4.875c6.75 0 9.75 5.25 9.75 5.25a17.27 17.27 0 0 1-3.015 3.83M6.228 6.228C4.068 7.545 2.25 10.125 2.25 10.125s3 5.25 9.75 5.25a10.9 10.9 0 0 0 4.27-.835" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
-                        </div>
-
-                        <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-900">إنشاء الحساب</button>
-                    </form>
-
-                    @if (hasExternalProviders)
-                    {
-                        <div class="mt-6">
-                            <p class="mb-3 text-sm font-bold text-slate-700">أو أنشئ الحساب مباشرة باستخدام</p>
-                            <div class="grid gap-2 sm:grid-cols-2">
-                                @if (googleEnabled)
-                                {
-                                    <form asp-action="ExternalLogin" method="post">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="provider" value="Google" />
-                                        <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
-                                        <button type="submit" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">Google</button>
-                                    </form>
-                                }
-
-                                @if (microsoftEnabled)
-                                {
-                                    <form asp-action="ExternalLogin" method="post">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="provider" value="Microsoft" />
-                                        <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
-                                        <button type="submit" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">Microsoft</button>
-                                    </form>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    <p class="mt-6 text-sm text-slate-600">
-                        لديك حساب بالفعل؟
-                        <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl" class="font-extrabold text-brand-700 hover:text-brand-900">سجل الدخول من هنا</a>
-                    </p>
-                </section>
+<body class="min-h-screen bg-gradient-to-br from-slate-100 to-brand-100 font-sans antialiased">
+    <main class="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-8">
+        <section class="w-full rounded-2xl border border-slate-200 bg-white p-7 shadow-xl sm:p-8">
+            <div class="text-center">
+                <h1 class="text-3xl font-black text-brand-500">إنشاء حساب جديد</h1>
+                <p class="mt-1 text-sm font-semibold text-slate-500">سجّل الآن للبدء</p>
             </div>
-        </main>
-    </div>
+
+            @if (TempData["LoginError"] is string extErr)
+            {
+                <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">@extErr</div>
+            }
+
+            <form id="registerForm" asp-action="Register" method="post" class="mt-6 space-y-4">
+                <input asp-for="ReturnUrl" type="hidden" />
+                <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+                <div>
+                    <label asp-for="FullName" class="mb-2 block text-sm font-bold text-slate-700">الاسم</label>
+                    <input asp-for="FullName" id="registerName" placeholder="اكتب اسمك" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100" />
+                    <span asp-validation-for="FullName" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Email" class="mb-2 block text-sm font-bold text-slate-700">البريد الإلكتروني</label>
+                    <input asp-for="Email" id="registerEmail" dir="ltr" placeholder="اكتب بريدك الإلكتروني" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100" />
+                    <span asp-validation-for="Email" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Password" class="mb-2 block text-sm font-bold text-slate-700">كلمة المرور</label>
+                    <div class="relative">
+                        <input asp-for="Password" id="registerPassword" type="password" dir="ltr" placeholder="اكتب كلمة المرور" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 pl-11 text-sm font-medium outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100" />
+                        <button type="button" data-toggle-target="registerPassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                            </svg>
+                            <svg data-eye-closed xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3l18 18" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.584 10.587a2.25 2.25 0 1 0 3.182 3.182" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.88 5.09A10.477 10.477 0 0 1 12 4.875c6.75 0 9.75 5.25 9.75 5.25a17.27 17.27 0 0 1-3.015 3.83M6.228 6.228C4.068 7.545 2.25 10.125 2.25 10.125s3 5.25 9.75 5.25a10.9 10.9 0 0 0 4.27-.835" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="mt-1 block text-xs font-semibold text-rose-600"></span>
+                </div>
+
+                <div>
+                    <label for="confirmPassword" class="mb-2 block text-sm font-bold text-slate-700">تأكيد كلمة المرور</label>
+                    <div class="relative">
+                        <input id="confirmPassword" type="password" dir="ltr" placeholder="أعد كتابة كلمة المرور" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 pl-11 text-sm font-medium outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100" autocomplete="new-password" />
+                        <button type="button" data-toggle-target="confirmPassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700" aria-label="إظهار كلمة المرور" aria-pressed="false">
+                            <svg data-eye-open xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12S5.25 6.75 12 6.75 21.75 12 21.75 12 18.75 17.25 12 17.25 2.25 12 2.25 12Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                            </svg>
+                            <svg data-eye-closed xmlns="http://www.w3.org/2000/svg" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3l18 18" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.584 10.587a2.25 2.25 0 1 0 3.182 3.182" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.88 5.09A10.477 10.477 0 0 1 12 4.875c6.75 0 9.75 5.25 9.75 5.25a17.27 17.27 0 0 1-3.015 3.83M6.228 6.228C4.068 7.545 2.25 10.125 2.25 10.125s3 5.25 9.75 5.25a10.9 10.9 0 0 0 4.27-.835" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="confirmPasswordError" class="mt-1 hidden text-xs font-semibold text-rose-600">كلمة المرور وتأكيدها غير متطابقين</p>
+                </div>
+
+                <button id="registerButton" type="submit" class="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-base font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+                    <span id="registerButtonText">تسجيل</span>
+                    <span id="registerSpinner" class="hidden h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                </button>
+            </form>
+
+            @if (hasExternalProviders)
+            {
+                <div class="my-6 flex items-center gap-3">
+                    <hr class="flex-1 border-slate-200" />
+                    <span class="text-xs font-bold text-slate-500">أو</span>
+                    <hr class="flex-1 border-slate-200" />
+                </div>
+
+                <div class="space-y-3">
+                    @if (googleEnabled)
+                    {
+                        <form asp-action="ExternalLogin" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="provider" value="Google" />
+                            <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
+                            <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:shadow-sm" title="التسجيل باستخدام Google">
+                                <img src="https://www.svgrepo.com/show/303108/google-icon-logo.svg" class="h-5 w-5" alt="Google" />
+                                المتابعة باستخدام Google
+                            </button>
+                        </form>
+                    }
+
+                    @if (microsoftEnabled)
+                    {
+                        <form asp-action="ExternalLogin" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="provider" value="Microsoft" />
+                            <input type="hidden" name="returnUrl" value="@externalReturnUrl" />
+                            <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 hover:shadow-sm" title="التسجيل باستخدام Microsoft">
+                                <svg class="h-5 w-5" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                                    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                                    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                                </svg>
+                                المتابعة باستخدام Microsoft
+                            </button>
+                        </form>
+                    }
+                </div>
+            }
+
+            <p class="mt-6 text-center text-sm font-semibold text-slate-600">
+                لديك حساب بالفعل؟
+                <a asp-action="Login" asp-route-returnUrl="@Model.ReturnUrl" class="font-black text-brand-500 hover:underline">تسجيل الدخول</a>
+            </p>
+        </section>
+    </main>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
     <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     <script>
         (function () {
-            var toggles = document.querySelectorAll("[data-toggle-target]");
-            toggles.forEach(function (btn) {
-                btn.addEventListener("click", function () {
-                    var targetId = btn.getAttribute("data-toggle-target");
-                    var input = document.getElementById(targetId);
-                    if (!input) return;
+            var form = document.getElementById("registerForm");
+            var nameInput = document.getElementById("registerName");
+            var emailInput = document.getElementById("registerEmail");
+            var passwordInput = document.getElementById("registerPassword");
+            var confirmPasswordInput = document.getElementById("confirmPassword");
+            var confirmPasswordError = document.getElementById("confirmPasswordError");
+            var registerButton = document.getElementById("registerButton");
+            var registerButtonText = document.getElementById("registerButtonText");
+            var registerSpinner = document.getElementById("registerSpinner");
+            var emailPattern = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
 
-                    var isPassword = input.type === "password";
-                    input.type = isPassword ? "text" : "password";
-                    btn.setAttribute("aria-label", isPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
-                    btn.setAttribute("aria-pressed", isPassword ? "true" : "false");
+            function isConfirmValid() {
+                if (!passwordInput || !confirmPasswordInput) {
+                    return false;
+                }
+                return passwordInput.value.length > 0 && confirmPasswordInput.value.length > 0 && passwordInput.value === confirmPasswordInput.value;
+            }
 
-                    var eyeOpen = btn.querySelector("[data-eye-open]");
-                    var eyeClosed = btn.querySelector("[data-eye-closed]");
-                    if (eyeOpen && eyeClosed) {
-                        eyeOpen.classList.toggle("hidden", isPassword);
-                        eyeClosed.classList.toggle("hidden", !isPassword);
-                    }
+            function updateConfirmState() {
+                if (!confirmPasswordError || !passwordInput || !confirmPasswordInput) {
+                    return;
+                }
+
+                var hasValues = passwordInput.value.length > 0 || confirmPasswordInput.value.length > 0;
+                var valid = passwordInput.value === confirmPasswordInput.value;
+                confirmPasswordError.classList.toggle("hidden", !hasValues || valid);
+            }
+
+            function updateSubmitState() {
+                if (!nameInput || !emailInput || !passwordInput || !confirmPasswordInput || !registerButton) {
+                    return;
+                }
+
+                var name = (nameInput.value || "").trim();
+                var email = (emailInput.value || "").trim();
+                var password = passwordInput.value || "";
+                var canSubmit = name.length >= 3 && emailPattern.test(email) && password.length >= 6 && isConfirmValid();
+                registerButton.disabled = !canSubmit;
+            }
+
+            function togglePassword(inputId, button) {
+                var input = document.getElementById(inputId);
+                if (!input) return;
+                var isPassword = input.type === "password";
+                input.type = isPassword ? "text" : "password";
+                button.setAttribute("aria-label", isPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور");
+                button.setAttribute("aria-pressed", isPassword ? "true" : "false");
+
+                var eyeOpen = button.querySelector("[data-eye-open]");
+                var eyeClosed = button.querySelector("[data-eye-closed]");
+                if (eyeOpen && eyeClosed) {
+                    eyeOpen.classList.toggle("hidden", isPassword);
+                    eyeClosed.classList.toggle("hidden", !isPassword);
+                }
+            }
+
+            document.querySelectorAll("[data-toggle-target]").forEach(function (button) {
+                button.addEventListener("click", function () {
+                    togglePassword(button.getAttribute("data-toggle-target"), button);
                 });
             });
+
+            [nameInput, emailInput, passwordInput, confirmPasswordInput].forEach(function (el) {
+                if (!el) return;
+                el.addEventListener("input", function () {
+                    updateConfirmState();
+                    updateSubmitState();
+                });
+            });
+
+            if (form) {
+                form.addEventListener("submit", function (evt) {
+                    updateConfirmState();
+                    if (!isConfirmValid()) {
+                        evt.preventDefault();
+                        if (confirmPasswordInput) {
+                            confirmPasswordInput.focus();
+                        }
+                        return;
+                    }
+
+                    if (registerButton) {
+                        registerButton.disabled = true;
+                    }
+                    if (registerButtonText) {
+                        registerButtonText.textContent = "جارٍ التسجيل...";
+                    }
+                    if (registerSpinner) {
+                        registerSpinner.classList.remove("hidden");
+                    }
+                });
+            }
+
+            updateConfirmState();
+            updateSubmitState();
         })();
     </script>
 </body>

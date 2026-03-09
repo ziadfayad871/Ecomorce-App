@@ -1,15 +1,12 @@
-﻿using DataAccess.Data;
-using DataAccess.Models.Entities;
+using Core.Application.Common.Identity;
+using DataAccess.Data;
+using Core.Domain.Entities;
 using DataAccess.Security;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Services
 {
-    public class MemberAuthService
+    public class MemberAuthService : IMemberAuthService
     {
         private readonly ApplicationDbContext _db;
 

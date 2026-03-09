@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Core.Application/Core.Application.csproj" />
+  <Project Path="Core.Domain/Core.Domain.csproj" />
   <Project Path="DataAccess/DataAccess.csproj" />
   <Project Path="Task/Task.csproj" />
 </Solution>

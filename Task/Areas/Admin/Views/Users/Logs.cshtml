@@ -1,0 +1,60 @@
+@model IReadOnlyList<global::Core.Application.Common.Activities.AdminActivityItem>
+@{
+    ViewData["Title"] = "سجل العمليات";
+    var actorFilter = ViewBag.ActorFilter as string;
+    var actorDisplayName = ViewBag.ActorDisplayName as string;
+}
+
+<section class="space-y-5">
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h8m-8 4h5m-7 6h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8l-4 4v12a2 2 0 0 0 2 2Z" />
+            </svg>
+            سجل العمليات
+        </h1>
+
+        <hr class="header-divider mt-3 border-slate-200" />
+
+        @if (!string.IsNullOrWhiteSpace(actorFilter))
+        {
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold">
+                <span class="rounded-full bg-admin-50 px-2 py-1 text-admin-700">تصفية حسب: @(string.IsNullOrWhiteSpace(actorDisplayName) ? actorFilter : actorDisplayName)</span>
+                <a asp-area="Admin" asp-controller="Users" asp-action="Logs" class="rounded-full border border-slate-300 px-2 py-1 text-slate-600 transition hover:border-admin-300 hover:text-admin-700">إزالة التصفية</a>
+            </div>
+        }
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="admin-table text-sm">
+            <thead>
+                <tr>
+                    <th class="px-4 py-3 font-bold">المستخدم</th>
+                    <th class="px-4 py-3 font-bold">العملية</th>
+                    <th class="px-4 py-3 font-bold">التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="3" class="px-4 py-10 text-center font-semibold text-slate-500">لا توجد عمليات حالياً.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="px-4 py-3 font-semibold text-slate-800">@(string.IsNullOrWhiteSpace(item.ActorName) ? "مستخدم" : item.ActorName)</td>
+                            <td class="px-4 py-3 text-slate-700">@item.Message</td>
+                            <td class="px-4 py-3 text-center text-slate-600">
+                                <span class="mx-auto block w-fit admin-stat-number">@item.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

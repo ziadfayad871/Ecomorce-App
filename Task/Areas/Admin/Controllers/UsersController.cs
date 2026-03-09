@@ -1,10 +1,12 @@
+using Core.Application.Common.Activities;
+using Core.Application.Common.Persistence;
 using DataAccess.Models.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Task.Areas.Admin.ViewModels;
-using Task.Contracts;
-using MemberEntity = DataAccess.Models.Entities.Member;
+using MemberEntity = Core.Domain.Entities.Member;
 
 namespace Task.Areas.Admin.Controllers
 {
@@ -16,25 +18,40 @@ namespace Task.Areas.Admin.Controllers
         private readonly IRepository<MemberEntity> _members;
         private readonly UserManager<ApplicationUser> _userMgr;
         private readonly RoleManager<IdentityRole> _roleMgr;
+        private readonly IAdminActivityService _activity;
 
         public UsersController(
             IRepository<MemberEntity> members,
             UserManager<ApplicationUser> userMgr,
-            RoleManager<IdentityRole> roleMgr)
+            RoleManager<IdentityRole> roleMgr,
+            IAdminActivityService activity)
         {
             _members = members;
             _userMgr = userMgr;
             _roleMgr = roleMgr;
+            _activity = activity;
         }
 
         [HttpGet]
         public IActionResult Index() => View();
 
         [HttpGet]
-        public async System.Threading.Tasks.Task<IActionResult> Admins()
+        public async System.Threading.Tasks.Task<IActionResult> Admins(string? searchTerm = null)
         {
             var admins = await _userMgr.GetUsersInRoleAsync(AdminRole);
-            return View(admins.OrderByDescending(x => x.CreatedAt).ToList());
+            var query = admins.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var normalizedSearch = searchTerm.Trim();
+                query = query.Where(x =>
+                    (!string.IsNullOrWhiteSpace(x.FullName) && x.FullName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrWhiteSpace(x.Email) && x.Email.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            ViewBag.SearchTerm = searchTerm?.Trim() ?? string.Empty;
+            return View(query.OrderByDescending(x => x.CreatedAt).ToList());
         }
 
         [HttpGet]
@@ -66,7 +83,9 @@ namespace Task.Areas.Admin.Controllers
                     }
                 }
 
-                TempData["UserAction"] = "This email already exists and is now assigned as admin.";
+                var existingMsg = "البريد موجود بالفعل وتم منحه صلاحية مشرف.";
+                TempData["UserAction"] = existingMsg;
+                _activity.Add("المستخدمين", existingMsg);
                 return RedirectToAction(nameof(Admins));
             }
 
@@ -92,16 +111,21 @@ namespace Task.Areas.Admin.Controllers
             var roleRes = await _userMgr.AddToRoleAsync(user, AdminRole);
             if (!roleRes.Succeeded)
             {
-                TempData["UserAction"] = $"Admin created but role assignment failed: {string.Join(" | ", roleRes.Errors.Select(e => e.Description))}";
-                return RedirectToAction(nameof(Admins));
+                var failedRoleMsg = $"تم إنشاء الحساب لكن فشل تعيين صلاحية المشرف: {string.Join(" | ", roleRes.Errors.Select(e => e.Description))}";
+                TempData["UserError"] = failedRoleMsg;
+                _activity.Add("المستخدمين", failedRoleMsg);
+                ModelState.Clear();
+                return View(new CreateAdminVm());
             }
 
-            TempData["UserAction"] = "New admin user created successfully.";
+            var createdMsg = "تم إنشاء حساب مشرف جديد بنجاح.";
+            TempData["UserAction"] = createdMsg;
+            _activity.Add("المستخدمين", createdMsg);
             return RedirectToAction(nameof(Admins));
         }
 
         [HttpGet]
-        public async System.Threading.Tasks.Task<IActionResult> Members()
+        public async System.Threading.Tasks.Task<IActionResult> Members(string? searchTerm = null)
         {
             var admins = await _userMgr.GetUsersInRoleAsync(AdminRole);
             var adminEmails = admins
@@ -111,10 +135,183 @@ namespace Task.Areas.Admin.Controllers
             var allMembers = await _members.GetAllAsync();
             var regularMembers = allMembers
                 .Where(x => !adminEmails.Contains(x.Email.Trim().ToLowerInvariant()))
-                .OrderByDescending(x => x.CreatedAt)
                 .ToList();
 
-            return View(regularMembers);
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var normalizedSearch = searchTerm.Trim();
+                regularMembers = regularMembers
+                    .Where(x =>
+                        (!string.IsNullOrWhiteSpace(x.FullName) && x.FullName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(x.Email) && x.Email.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
+
+            ViewBag.SearchTerm = searchTerm?.Trim() ?? string.Empty;
+            return View(regularMembers.OrderByDescending(x => x.CreatedAt).ToList());
+        }
+
+        [HttpGet]
+        public async System.Threading.Tasks.Task<IActionResult> EditMember(int id)
+        {
+            var member = await _members.GetByIdAsync(id);
+            if (member == null)
+            {
+                return NotFound();
+            }
+
+            return View(new MemberEditVm
+            {
+                Id = member.Id,
+                FullName = member.FullName,
+                Email = member.Email,
+                IsActive = member.IsActive,
+                CreatedAt = member.CreatedAt
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async System.Threading.Tasks.Task<IActionResult> EditMember(MemberEditVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(vm);
+            }
+
+            var member = await _members.GetByIdAsync(vm.Id);
+            if (member == null)
+            {
+                return NotFound();
+            }
+
+            var normalizedEmail = vm.Email.Trim().ToLowerInvariant();
+            var otherMembers = await _members.GetAllAsync();
+            var emailExistsForAnotherMember = otherMembers.Any(x =>
+                x.Id != vm.Id &&
+                string.Equals(x.Email?.Trim(), normalizedEmail, StringComparison.OrdinalIgnoreCase));
+
+            if (emailExistsForAnotherMember)
+            {
+                ModelState.AddModelError(nameof(vm.Email), "هذا البريد مستخدم بالفعل.");
+                return View(vm);
+            }
+
+            var adminUser = await _userMgr.FindByEmailAsync(normalizedEmail);
+            if (adminUser != null && await _userMgr.IsInRoleAsync(adminUser, AdminRole))
+            {
+                ModelState.AddModelError(nameof(vm.Email), "هذا البريد مرتبط بحساب مشرف.");
+                return View(vm);
+            }
+
+            member.FullName = vm.FullName.Trim();
+            member.Email = normalizedEmail;
+            member.IsActive = vm.IsActive;
+            _members.Update(member);
+            await _members.SaveChangesAsync();
+
+            var updatedMsg = "تم تحديث بيانات العضو بنجاح.";
+            TempData["UserAction"] = updatedMsg;
+            _activity.Add("المستخدمين", updatedMsg);
+
+            return RedirectToAction(nameof(EditMember), new { id = member.Id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async System.Threading.Tasks.Task<IActionResult> DeleteMember(int id)
+        {
+            var member = await _members.GetByIdAsync(id);
+            if (member == null)
+            {
+                return NotFound();
+            }
+
+            _members.Remove(member);
+            await _members.SaveChangesAsync();
+
+            var deletedMsg = "تم حذف العضو بنجاح.";
+            TempData["UserAction"] = deletedMsg;
+            _activity.Add("المستخدمين", deletedMsg);
+
+            return RedirectToAction(nameof(Members));
+        }
+
+        [HttpGet]
+        public async System.Threading.Tasks.Task<IActionResult> Roles()
+        {
+            var admins = await _userMgr.GetUsersInRoleAsync(AdminRole);
+            var adminEmails = admins
+                .Select(x => x.Email?.Trim().ToLowerInvariant() ?? string.Empty)
+                .ToHashSet();
+
+            var allMembers = await _members.GetAllAsync();
+            var membersCount = allMembers.Count(x => !adminEmails.Contains((x.Email ?? string.Empty).Trim().ToLowerInvariant()));
+
+            var vm = new List<RoleSummaryVm>
+            {
+                new RoleSummaryVm
+                {
+                    Name = AdminRole,
+                    DisplayName = "المشرفين",
+                    UsersCount = admins.Count,
+                    BrowseAction = nameof(Admins)
+                },
+                new RoleSummaryVm
+                {
+                    Name = "Member",
+                    DisplayName = "الأعضاء",
+                    UsersCount = membersCount,
+                    BrowseAction = nameof(Members)
+                }
+            };
+
+            var otherRoles = await _roleMgr.Roles
+                .OrderBy(r => r.Name)
+                .ToListAsync();
+
+            foreach (var role in otherRoles)
+            {
+                var roleName = role.Name ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(roleName) ||
+                    string.Equals(roleName, AdminRole, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(roleName, "Member", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var users = await _userMgr.GetUsersInRoleAsync(roleName);
+                vm.Add(new RoleSummaryVm
+                {
+                    Name = roleName,
+                    DisplayName = roleName,
+                    UsersCount = users.Count
+                });
+            }
+
+            return View(vm);
+        }
+
+        [HttpGet]
+        public async System.Threading.Tasks.Task<IActionResult> Logs(string? actor = null)
+        {
+            IReadOnlyList<AdminActivityItem> logs;
+            string? actorDisplayName = null;
+
+            if (string.IsNullOrWhiteSpace(actor))
+            {
+                logs = _activity.GetAll();
+            }
+            else
+            {
+                logs = _activity.GetByActor(actor);
+                var actorUser = await _userMgr.FindByIdAsync(actor) ?? await _userMgr.FindByEmailAsync(actor);
+                actorDisplayName = actorUser?.FullName ?? actorUser?.Email ?? actor;
+            }
+
+            ViewBag.ActorFilter = actor;
+            ViewBag.ActorDisplayName = actorDisplayName;
+            return View(logs);
         }
 
         [HttpPost]
@@ -131,7 +328,9 @@ namespace Task.Areas.Admin.Controllers
             var adminUser = await _userMgr.FindByEmailAsync(email);
             if (adminUser != null && await _userMgr.IsInRoleAsync(adminUser, AdminRole))
             {
-                TempData["UserAction"] = "Blocking admin accounts is disabled.";
+                var blockedAdminMsg = "غير مسموح بحظر حسابات المشرفين.";
+                TempData["UserError"] = blockedAdminMsg;
+                _activity.Add("المستخدمين", blockedAdminMsg);
                 return RedirectToAction(nameof(Members));
             }
 
@@ -139,9 +338,11 @@ namespace Task.Areas.Admin.Controllers
             _members.Update(user);
             await _members.SaveChangesAsync();
 
-            TempData["UserAction"] = user.IsActive
-                ? "User has been unblocked."
-                : "User has been blocked.";
+            var statusMsg = user.IsActive
+                ? "تم فك حظر العضو بنجاح."
+                : "تم حظر العضو بنجاح.";
+            TempData["UserAction"] = statusMsg;
+            _activity.Add("المستخدمين", statusMsg);
 
             return RedirectToAction(nameof(Members));
         }

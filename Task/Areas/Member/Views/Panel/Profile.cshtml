@@ -1,0 +1,58 @@
+﻿@model global::Core.Application.Members.Models.MemberProfileVm
+
+<section class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        @await Html.PartialAsync("_PanelSideNav")
+
+        <div class="space-y-6">
+            <section class="member-surface rounded-3xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="member-chip">بيانات الحساب</span>
+                        <h1 class="mt-4 text-3xl font-black text-slate-900">الملف الشخصي</h1>
+                        <p class="mt-2 text-sm font-semibold leading-8 text-slate-600">حدّث اسمك وبريدك الإلكتروني المستخدمين في حساب العضو.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 text-sm font-black">
+                        <span class="rounded-full @(Model.IsActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700") px-3 py-1">
+                            @(Model.IsActive ? "الحساب مفعل" : "الحساب غير مفعل")
+                        </span>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-slate-600">عضو منذ @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="member-surface rounded-3xl p-5">
+                <form asp-area="Member" asp-controller="Panel" asp-action="Profile" method="post" class="grid gap-5 lg:grid-cols-2">
+                    @Html.AntiForgeryToken()
+
+                    <div class="lg:col-span-2">
+                        <div asp-validation-summary="ModelOnly" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700"></div>
+                    </div>
+
+                    <div>
+                        <label asp-for="FullName" class="mb-2 block text-sm font-black text-slate-700">الاسم الكامل</label>
+                        <input asp-for="FullName" class="member-profile-input" placeholder="اكتب اسمك الكامل" />
+                        <span asp-validation-for="FullName" class="mt-1 block text-xs font-bold text-rose-600"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="Email" class="mb-2 block text-sm font-black text-slate-700">البريد الإلكتروني</label>
+                        <input asp-for="Email" dir="ltr" class="member-profile-input" placeholder="name@example.com" />
+                        <span asp-validation-for="Email" class="mt-1 block text-xs font-bold text-rose-600"></span>
+                    </div>
+
+                    <div class="lg:col-span-2 flex justify-end gap-3">
+                        <a asp-area="Member" asp-controller="Panel" asp-action="Index" class="member-btn-outline px-5 py-3 text-sm">إلغاء</a>
+                        <button type="submit" class="member-btn-primary px-6 py-3 text-sm">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+

@@ -1,0 +1,44 @@
+@model global::Task.Areas.Admin.ViewModels.LanguageSettingsVm
+@{
+    ViewData["Title"] = "إعدادات اللغة";
+}
+
+<section class="space-y-5">
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h16M4 12h6m-6 7h16M12 12h8M9 5c0 6-2.5 11.5-5 14m7-14c0 6 2.5 11.5 5 14" />
+            </svg>
+            إعدادات اللغة
+        </h1>
+        <hr class="header-divider mt-3 border-slate-200" />
+    </div>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <form asp-area="Admin" asp-controller="Settings" asp-action="Language" method="post" class="mx-auto max-w-2xl space-y-4">
+            @Html.AntiForgeryToken()
+            <div class="space-y-2">
+                <label class="block text-sm font-bold text-slate-700">اختر اللغة</label>
+                <div class="space-y-2">
+                    <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                        <input type="radio" asp-for="SelectedLanguage" value="ar" class="h-4 w-4 accent-admin-600" />
+                        <span class="text-sm font-bold text-slate-700">العربية</span>
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                        <input type="radio" asp-for="SelectedLanguage" value="en" class="h-4 w-4 accent-admin-600" />
+                        <span class="text-sm font-bold text-slate-700">English</span>
+                    </label>
+                </div>
+                <span asp-validation-for="SelectedLanguage" class="text-xs font-bold text-red-600"></span>
+            </div>
+
+            <div class="flex justify-center">
+                <button type="submit" class="rounded-lg bg-admin-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-700">حفظ</button>
+            </div>
+        </form>
+    </article>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

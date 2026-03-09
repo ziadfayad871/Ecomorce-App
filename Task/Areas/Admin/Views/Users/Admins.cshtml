@@ -1,37 +1,57 @@
-@model List<DataAccess.Models.Identity.ApplicationUser>
+﻿@model List<DataAccess.Models.Identity.ApplicationUser>
 @{
-    ViewData["Title"] = "حسابات الأدمن";
+    ViewData["Title"] = "عرض المشرفين";
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
 }
 
-<section class="space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-3xl font-extrabold text-slate-900">حسابات الأدمن</h1>
+<section class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m12 3 7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4Z" />
+            </svg>
+            عرض المشرفين
+        </h1>
+
+        <a asp-area="Admin" asp-controller="Users" asp-action="CreateAdmin" class="mr-auto inline-flex items-center gap-1.5 rounded-md bg-admin-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+            </svg>
+            إضافة مشرف
+        </a>
+
+        <hr class="header-divider w-full border-slate-200" />
     </div>
 
-    @if (TempData["UserAction"] is string msg)
-    {
-        <div class="rounded-2xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm font-semibold text-admin-700">@msg</div>
-    }
-
-    <div class="flex flex-wrap items-center gap-2">
-        <a asp-area="Admin" asp-controller="Users" asp-action="CreateAdmin" class="rounded-xl bg-admin-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-admin-900">إنشاء Admin جديد</a>
+    <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <form method="get" asp-area="Admin" asp-controller="Users" asp-action="Admins" class="space-y-2">
+            <label for="adminsSearch" class="mb-1 block text-[11px] font-bold tracking-[0.18em] text-slate-500">بحث</label>
+            <div class="grid gap-2 md:grid-cols-2">
+                <input id="adminsSearch" name="searchTerm" value="@searchTerm" type="search" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" placeholder="ابحث بالاسم أو البريد..." />
+                <div class="flex items-center justify-end gap-2">
+                    <button type="submit" class="rounded-xl bg-admin-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-800">بحث</button>
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Admins" class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">إلغاء</a>
+                </div>
+            </div>
+        </form>
     </div>
 
     <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-slate-600">
+        <table id="adminsTable" class="admin-table text-sm">
+            <thead>
                 <tr>
-                    <th class="px-4 py-3 text-right font-bold">الاسم</th>
-                    <th class="px-4 py-3 text-right font-bold">البريد الإلكتروني</th>
-                    <th class="px-4 py-3 text-right font-bold">تاريخ الإنشاء</th>
-                    <th class="px-4 py-3 text-right font-bold">الصلاحية</th>
+                    <th class="px-4 py-3 font-bold">الاسم</th>
+                    <th class="px-4 py-3 font-bold">البريد الإلكتروني</th>
+                    <th class="px-4 py-3 font-bold">الصلاحية</th>
+                    <th class="px-4 py-3 font-bold">تاريخ الإنشاء</th>
+                    <th class="px-4 py-3 font-bold">عرض النشاط</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody>
                 @if (Model.Count == 0)
                 {
                     <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-slate-500">لا يوجد أي Admin حاليا.</td>
+                        <td colspan="5" class="px-4 py-10 text-center font-semibold text-slate-500">لا توجد حسابات مشرفين حالياً.</td>
                     </tr>
                 }
                 else
@@ -39,11 +59,16 @@
                     @foreach (var admin in Model)
                     {
                         <tr>
-                            <td class="px-4 py-3 font-semibold text-slate-800">@(string.IsNullOrWhiteSpace(admin.FullName) ? "Admin" : admin.FullName)</td>
+                            <td class="px-4 py-3 font-semibold text-slate-800">@(string.IsNullOrWhiteSpace(admin.FullName) ? "مشرف" : admin.FullName)</td>
                             <td class="px-4 py-3 text-slate-700" dir="ltr">@admin.Email</td>
-                            <td class="px-4 py-3 text-slate-600">@admin.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">Admin</span>
+                                <span class="rounded-full bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">مشرف</span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-slate-600">
+                                <span class="mx-auto block w-fit admin-stat-number">@admin.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <a asp-area="Admin" asp-controller="Users" asp-action="Logs" asp-route-actor="@admin.Id" title="عرض نشاط المشرف" aria-label="عرض نشاط المشرف" class="admin-action-btn inline-flex h-8 items-center justify-center rounded-lg border border-admin-300 px-3 text-xs font-bold text-admin-700 transition">عرض</a>
                             </td>
                         </tr>
                     }

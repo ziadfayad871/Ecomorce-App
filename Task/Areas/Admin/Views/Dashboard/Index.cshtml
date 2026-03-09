@@ -1,49 +1,579 @@
+﻿@using System.Globalization
+@using System.Linq
 @model global::Task.Areas.Admin.ViewModels.DashboardVm
 @{
-    ViewData["Title"] = "Dashboard";
-    var blockedCount = Model.MembersCount - Model.ActiveMembersCount;
+    ViewData["Title"] = "لوحة التحكم";
+
+    var arabicCulture = new CultureInfo("ar-EG");
+
+    decimal ToPercent(int part, int whole) => whole <= 0 ? 0m : Math.Round(part * 100m / whole, 1);
+    string FormatInt(int value) => value.ToString("N0", arabicCulture);
+    string FormatMoney(decimal value) => $"{value.ToString("N2", arabicCulture)} EGP";
+    string FormatSignedPercent(decimal value) => $"{Math.Abs(value):0.#}%";
+    string TrendArrow(decimal value) => value > 0 ? "↑" : value < 0 ? "↓" : "↔";
+    string TrendBadgeClass(decimal value, bool inverse = false)
+    {
+        if (value == 0m) return "bg-slate-100 text-slate-600";
+        if (inverse)
+        {
+            return value < 0m ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
+        }
+
+        return value > 0m ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
+    }
+
+    string RangeLabel(string key) => key switch
+    {
+        "today" => "اليوم",
+        "week" => "الأسبوع",
+        "month" => "الشهر",
+        _ => "آخر 30 يوم"
+    };
+
+    string OrderStatusClass(string status) => status switch
+    {
+        "مكتمل" => "bg-emerald-50 text-emerald-700 border border-emerald-200",
+        "قيد الشحن" => "bg-sky-50 text-sky-700 border border-sky-200",
+        "ملغي" => "bg-rose-50 text-rose-700 border border-rose-200",
+        _ => "bg-amber-50 text-amber-700 border border-amber-200"
+    };
+
+    var totalItems = Math.Max(0, Model.ProductsCount + Model.DesignsCount + Model.MembersCount + Model.AdminsCount);
+    var activeMembers = Math.Clamp(Model.ActiveMembersCount, 0, Model.MembersCount);
+    var inactiveMembers = Math.Max(0, Model.InactiveMembersCount);
+    var productsPct = ToPercent(Model.ProductsCount, totalItems);
+    var sectionsPct = ToPercent(Model.DesignsCount, totalItems);
+    var membersPct = ToPercent(Model.MembersCount, totalItems);
+    var adminsPct = ToPercent(Model.AdminsCount, totalItems);
+    var activeMembersPct = ToPercent(activeMembers, Model.MembersCount);
+    var inactiveMembersPct = ToPercent(inactiveMembers, Model.MembersCount);
+    var selectedRange = string.IsNullOrWhiteSpace(Model.SelectedRange) ? "30d" : Model.SelectedRange;
+
+    var invariant = CultureInfo.InvariantCulture;
+    var salesPoints = Model.SalesLast30Days ?? new List<global::Task.Areas.Admin.ViewModels.DailySalesPointVm>();
+    var maxSalesValue = salesPoints.Count == 0 ? 0m : salesPoints.Max(x => x.Total);
+    var hasSalesData = salesPoints.Any(x => x.Total > 0m);
+
+    var statusItems = (Model.OrderStatusDistribution ?? new List<global::Task.Areas.Admin.ViewModels.OrderStatusDistributionVm>())
+        .Where(x => x.Count > 0)
+        .ToList();
+    var totalStatusOrders = statusItems.Sum(x => x.Count);
+    var hasStatusData = totalStatusOrders > 0;
+
+    var donutParts = new List<string>();
+    var donutCursor = 0m;
+    foreach (var item in statusItems)
+    {
+        var nextCursor = Math.Min(100m, donutCursor + item.Percent);
+        donutParts.Add($"{item.ColorHex} {donutCursor.ToString("0.##", invariant)}% {nextCursor.ToString("0.##", invariant)}%");
+        donutCursor = nextCursor;
+    }
+    if (donutCursor < 100m)
+    {
+        donutParts.Add($"#e2e8f0 {donutCursor.ToString("0.##", invariant)}% 100%");
+    }
+    var donutGradient = donutParts.Count > 0
+        ? $"conic-gradient({string.Join(", ", donutParts)})"
+        : "conic-gradient(#e2e8f0 0% 100%)";
+    var activeOffersCount = (Model.Offers ?? new List<global::Task.Areas.Admin.ViewModels.OfferVm>()).Count(x => x.IsActive);
 }
 
-<section class="space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-3xl font-extrabold text-slate-900">Dashboard</h1>
+<section class="space-y-4 text-right" dir="rtl">
+    <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="text-center">
+            <h1 class="text-xl font-black tracking-tight text-admin-900">مركز ذكاء الأعمال</h1>
+            <p class="mt-1 text-xs font-semibold text-slate-500">لوحة موحّدة لمتابعة الأداء وربط أقسام الإدارة الرئيسية</p>
+        </div>
+
+        <div class="bi-center-grid mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+            <a asp-area="Admin" asp-controller="Users" asp-action="Members" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-admin-300 hover:bg-white" aria-label="رؤى العملاء">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-admin-100 text-admin-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM3 20a7 7 0 0 1 14 0" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Customer Insights</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">رؤى العملاء</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">تحليل نشاط الأعضاء وحالة الحسابات.</p>
+                <p class="mt-2 text-sm font-black text-admin-800">@FormatInt(Model.NewMembersCount30d) عضو جديد / 30 يوم</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">عرض الأعضاء <span aria-hidden="true">←</span></span>
+            </a>
+
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Reports" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-emerald-300 hover:bg-white" aria-label="أداء المبيعات">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 14h4v6H4v-6Zm6-5h4v11h-4V9Zm6-3h4v14h-4V6Z" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Sales Performance</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">أداء المبيعات</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">متابعة الإيرادات واتجاهات النمو.</p>
+                <p class="mt-2 text-sm font-black text-emerald-700">@FormatMoney(Model.SalesTotal)</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">فتح التقارير <span aria-hidden="true">←</span></span>
+            </a>
+
+            <a asp-area="Admin" asp-controller="Products" asp-action="Index" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-indigo-300 hover:bg-white" aria-label="ذكاء المنتجات">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7 12 3 4 7m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Product Intelligence</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">ذكاء المنتجات</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">إدارة المنتجات وتنبيهات المخزون.</p>
+                <p class="mt-2 text-sm font-black text-indigo-700">@FormatInt(Model.LowStockProductsCount) منخفض المخزون</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">إدارة المنتجات <span aria-hidden="true">←</span></span>
+            </a>
+
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Offers" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-amber-300 hover:bg-white" aria-label="تحليلات التسويق">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M8 3v4m8-4v4M6 11h12v10H6V11Zm3 3h6m-6 3h4" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Marketing Analytics</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">تحليلات التسويق</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">متابعة العروض والكوبونات النشطة.</p>
+                <p class="mt-2 text-sm font-black text-amber-700">@FormatInt(activeOffersCount) عرض نشط</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">إدارة العروض <span aria-hidden="true">←</span></span>
+            </a>
+
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Orders" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-cyan-300 hover:bg-white" aria-label="النظرة المالية">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-2.2 0-4 .9-4 2s1.8 2 4 2 4 .9 4 2-1.8 2-4 2m0-8V6m0 10v2m8-6a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Financial Overview</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">النظرة المالية</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">قراءة سريعة لحركة الطلبات والمدفوعات.</p>
+                <p class="mt-2 text-sm font-black text-cyan-700">AOV: @FormatMoney(Model.AverageOrderValue)</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">فتح إدارة الطلبات <span aria-hidden="true">←</span></span>
+            </a>
+
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Reports" class="bi-card group rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-rose-300 hover:bg-white" aria-label="تقارير مخصصة">
+                <div class="flex items-start justify-between">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h8m-8 4h5m-7 6h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8l-4 4v12a2 2 0 0 0 2 2Z" />
+                        </svg>
+                    </span>
+                    <span class="rounded-md bg-white px-2 py-1 text-[11px] font-bold text-slate-500">Custom Reports</span>
+                </div>
+                <h3 class="mt-3 text-base font-extrabold text-slate-900">تقارير مخصصة</h3>
+                <p class="mt-1 text-xs font-semibold text-slate-500">تقرير مرن حسب الفترة وحالة الطلبات.</p>
+                <p class="mt-2 text-sm font-black text-rose-700">@FormatInt(Model.PendingOrdersCount) طلب يحتاج متابعة</p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-admin-700">إنشاء تقرير <span aria-hidden="true">←</span></span>
+            </a>
+        </div>
+    </article>
+
+    <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-base font-extrabold text-admin-800">فلاتر الفترة</h2>
+            <span class="rounded-md bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">الفترة الحالية: @RangeLabel(selectedRange)</span>
+        </div>
+
+        <form method="get" asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="grid gap-3 md:grid-cols-4">
+            <div>
+                <label for="dashboardRange" class="mb-1 block text-xs font-bold text-slate-600">الفترة</label>
+                <select id="dashboardRange" name="range" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100">
+                    <option value="today" selected="@(selectedRange == "today" ? "selected" : null)">اليوم</option>
+                    <option value="week" selected="@(selectedRange == "week" ? "selected" : null)">الأسبوع</option>
+                    <option value="month" selected="@(selectedRange == "month" ? "selected" : null)">الشهر</option>
+                    <option value="30d" selected="@(selectedRange == "30d" ? "selected" : null)">آخر 30 يوم</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="dashboardFrom" class="mb-1 block text-xs font-bold text-slate-600">من تاريخ</label>
+                <input id="dashboardFrom" type="date" name="from" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" />
+            </div>
+
+            <div>
+                <label for="dashboardTo" class="mb-1 block text-xs font-bold text-slate-600">إلى تاريخ</label>
+                <input id="dashboardTo" type="date" name="to" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100" />
+            </div>
+
+            <div class="flex items-end justify-end gap-2 md:col-span-4">
+                <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-admin-700 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-800">
+                    تحديث
+                </button>
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">
+                    إلغاء
+                </a>
+            </div>
+        </form>
+
+        <p class="mt-3 text-xs font-bold text-slate-500">
+            عرض البيانات من
+            <span class="admin-stat-number text-admin-700">@Model.AppliedFromDate.ToString("yyyy-MM-dd")</span>
+            إلى
+            <span class="admin-stat-number text-admin-700">@Model.AppliedToDate.ToString("yyyy-MM-dd")</span>
+        </p>
+    </article>
+    <div class="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">إجمالي المبيعات</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="إجمالي المبيعات">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8c-2.2 0-4 .9-4 2s1.8 2 4 2 4 .9 4 2-1.8 2-4 2m0-8V6m0 10v2m8-6a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatMoney(Model.SalesTotal)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.SalesTotalChangePercent)">
+                    @TrendArrow(Model.SalesTotalChangePercent) @FormatSignedPercent(Model.SalesTotalChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">مقارنة بالفترة السابقة</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">مبيعات اليوم</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="مبيعات اليوم">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4h18M5 8h14l-1 10H6L5 8Zm4 4h6" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatMoney(Model.SalesToday)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.SalesTodayChangePercent)">
+                    @TrendArrow(Model.SalesTodayChangePercent) @FormatSignedPercent(Model.SalesTodayChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">حركة المبيعات اليومية</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">إجمالي الطلبات</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="إجمالي الطلبات">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 6h11l-1 12H8L7 6h2Zm-2 0h14M5 6l-1-2H2" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatInt(Model.OrdersCount)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.OrdersCountChangePercent)">
+                    @TrendArrow(Model.OrdersCountChangePercent) @FormatSignedPercent(Model.OrdersCountChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">حجم الطلبات الكلي</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">طلبات اليوم</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="طلبات اليوم">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h6m-8 8h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8L4 7v10a2 2 0 0 0 2 2Z" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatInt(Model.OrdersToday)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.OrdersTodayChangePercent)">
+                    @TrendArrow(Model.OrdersTodayChangePercent) @FormatSignedPercent(Model.OrdersTodayChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">طلبات آخر 24 ساعة</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">متوسط قيمة الطلب</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="متوسط قيمة الطلب">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 14h4v6H4v-6Zm6-5h4v11h-4V9Zm6-3h4v14h-4V6Z" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatMoney(Model.AverageOrderValue)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.AverageOrderValueChangePercent)">
+                    @TrendArrow(Model.AverageOrderValueChangePercent) @FormatSignedPercent(Model.AverageOrderValueChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">AOV</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">الطلبات المعلّقة</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="الطلبات المعلقة">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 7v5l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatInt(Model.PendingOrdersCount)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.PendingOrdersChangePercent, true)">
+                    @TrendArrow(Model.PendingOrdersChangePercent) @FormatSignedPercent(Model.PendingOrdersChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">تحتاج متابعة</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">منتجات منخفضة المخزون</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="منتجات منخفضة المخزون">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 13V7a2 2 0 0 0-2-2h-3l-2-2H8a2 2 0 0 0-2 2v2M4 9h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatInt(Model.LowStockProductsCount)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.LowStockProductsChangePercent, true)">
+                    @TrendArrow(Model.LowStockProductsChangePercent) @FormatSignedPercent(Model.LowStockProductsChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">تنبيهات مخزون</span>
+            </div>
+        </article>
+
+        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-xs font-bold text-slate-600">أعضاء جدد (آخر 30 يوم)</h2>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-admin-50 text-admin-700" aria-label="أعضاء جدد">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm6 9a7 7 0 0 0-14 0m14-7h-3m1.5-1.5v3" />
+                    </svg>
+                </span>
+            </div>
+            <p class="admin-stat-number text-2xl font-extrabold text-slate-900">@FormatInt(Model.NewMembersCount30d)</p>
+            <div class="mt-2 flex items-center justify-between">
+                <span class="rounded-full px-2 py-1 text-xs font-bold @TrendBadgeClass(Model.NewMembersChangePercent)">
+                    @TrendArrow(Model.NewMembersChangePercent) @FormatSignedPercent(Model.NewMembersChangePercent)
+                </span>
+                <span class="text-xs font-bold text-slate-500">مقارنة بآخر 30 يوم سابقة</span>
+            </div>
+        </article>
     </div>
-
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-admin-700">التصنيفات</p>
-            <p class="mt-3 text-3xl font-extrabold text-slate-900">@Model.DesignsCount</p>
-            <p class="mt-1 text-sm text-slate-500">إجمالي التصنيفات</p>
+    <div id="charts-section" class="grid gap-4 xl:grid-cols-3">
+        <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm xl:col-span-2">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-admin-800">المبيعات آخر 30 يوم</h2>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                    @(hasSalesData ? "بيانات حقيقية" : "لا توجد مبيعات حتى الآن")
+                </span>
+            </div>
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div class="flex h-44 items-end gap-1.5">
+                    @if (salesPoints.Count == 0)
+                    {
+                        <div class="flex h-full w-full items-center justify-center text-sm font-bold text-slate-500">
+                            لا توجد بيانات مبيعات.
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var point in salesPoints)
+                        {
+                            var ratio = maxSalesValue <= 0m ? 0m : (point.Total / maxSalesValue);
+                            var heightPx = maxSalesValue <= 0m ? 8 : Math.Max(8, (int)Math.Round(ratio * 170m));
+                            var opacityValue = maxSalesValue <= 0m ? "0.35" : "1";
+                            var titleText = $"{point.Date:yyyy-MM-dd} - {FormatMoney(point.Total)}";
+                            <span class="group relative h-full flex-1" title="@titleText">
+                                <span class="absolute bottom-0 left-0 right-0 rounded-t-md bg-admin-300 transition hover:bg-admin-500"
+                                      style="height:@(heightPx)px;opacity:@opacityValue"></span>
+                            </span>
+                        }
+                    }
+                </div>
+                <div class="mt-2 flex justify-between text-[11px] font-bold text-slate-500">
+                    <span>قبل 30 يوم</span>
+                    <span>اليوم</span>
+                </div>
+            </div>
         </article>
 
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-admin-700">المنتجات</p>
-            <p class="mt-3 text-3xl font-extrabold text-slate-900">@Model.ProductsCount</p>
-            <p class="mt-1 text-sm text-slate-500">إجمالي المنتجات</p>
+        <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-base font-extrabold text-admin-800">توزيع الطلبات حسب الحالة</h2>
+                <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                    @(hasStatusData ? $"{FormatInt(totalStatusOrders)} طلب" : "لا توجد طلبات")
+                </span>
+            </div>
+            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div class="relative mx-auto h-40 w-40">
+                    <div class="h-full w-full rounded-full" style="background:@donutGradient;"></div>
+                    <div class="absolute inset-7 rounded-full bg-white"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-center text-xs font-bold text-slate-600">
+                        @if (hasStatusData)
+                        {
+                            <span>@FormatInt(totalStatusOrders)<br />طلب</span>
+                        }
+                        else
+                        {
+                            <span>لا توجد بيانات</span>
+                        }
+                    </div>
+                </div>
+                <div class="mt-4 space-y-2">
+                    @foreach (var status in (Model.OrderStatusDistribution ?? new List<global::Task.Areas.Admin.ViewModels.OrderStatusDistributionVm>()))
+                    {
+                        <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700">
+                            <span class="inline-flex items-center gap-2">
+                                <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:@status.ColorHex"></span>
+                                @status.Status
+                            </span>
+                            <span class="admin-stat-number">@FormatInt(status.Count) (@status.Percent.ToString("0.#", arabicCulture)%)</span>
+                        </div>
+                    }
+                </div>
+            </div>
         </article>
+    </div>
+    <div class="grid gap-4 xl:grid-cols-3">
+        <div class="space-y-4 xl:col-span-2">
+            <article id="orders-table" class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-base font-extrabold text-admin-800">آخر 10 طلبات</h2>
+                    <span class="rounded-md bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">تحديث تلقائي</span>
+                </div>
 
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-admin-700">المستخدمين</p>
-            <p class="mt-3 text-3xl font-extrabold text-slate-900">@Model.MembersCount</p>
-            <p class="mt-1 text-sm text-slate-500">إجمالي المستخدمين</p>
-        </article>
+                <div class="overflow-hidden rounded-xl border border-slate-200">
+                    <table class="admin-table text-sm">
+                        <thead>
+                            <tr>
+                                <th class="px-4 py-3 font-bold">رقم الطلب</th>
+                                <th class="px-4 py-3 font-bold">العميل</th>
+                                <th class="px-4 py-3 font-bold">الإجمالي</th>
+                                <th class="px-4 py-3 font-bold">الحالة</th>
+                                <th class="px-4 py-3 font-bold">التاريخ</th>
+                                <th class="px-4 py-3 font-bold">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentOrders.Count == 0)
+                            {
+                                <tr>
+                                    <td colspan="6" class="px-4 py-8 text-sm font-bold text-slate-500">لا توجد طلبات حديثة.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td class="px-4 py-3 font-semibold text-slate-800">@order.OrderNumber</td>
+                                        <td class="px-4 py-3 text-slate-700">@order.CustomerName</td>
+                                        <td class="px-4 py-3 admin-stat-number text-slate-700">@FormatMoney(order.Total)</td>
+                                        <td class="px-4 py-3">
+                                            <span class="inline-flex rounded-full px-2 py-1 text-xs font-bold @OrderStatusClass(order.Status)">
+                                                @order.Status
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 admin-stat-number text-slate-700">@order.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td class="px-4 py-3">
+                                            <a href="@(string.IsNullOrWhiteSpace(order.ViewUrl) ? "#" : order.ViewUrl)"
+                                               class="admin-action-btn inline-flex items-center rounded-lg border border-admin-300 px-3 py-1 text-xs font-bold text-admin-700 transition hover:bg-admin-50"
+                                               title="عرض الطلب"
+                                               aria-label="عرض الطلب">
+                                                عرض
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
 
-        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-admin-700">الأدمن</p>
-            <p class="mt-3 text-3xl font-extrabold text-slate-900">@Model.AdminsCount</p>
-            <p class="mt-1 text-sm text-slate-500">إجمالي الأدمن</p>
-        </article>
+        </div>
 
-        <article class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-emerald-700">نشط</p>
-            <p class="mt-3 text-3xl font-extrabold text-emerald-800">@Model.ActiveMembersCount</p>
-            <p class="mt-1 text-sm text-emerald-700">مستخدم نشط</p>
-        </article>
+        <div class="space-y-4">
+            <article id="quick-actions" class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-base font-extrabold text-admin-800">إجراءات سريعة</h2>
+                    <span class="rounded-md bg-admin-50 px-2 py-1 text-xs font-bold text-admin-700">اختصارات</span>
+                </div>
+                <div class="grid gap-2">
+                    <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="inline-flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-300 hover:bg-admin-50 hover:text-admin-700" aria-label="إضافة منتج جديد">
+                        <span>إضافة منتج</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                        </svg>
+                    </a>
+                    <a asp-area="Admin" asp-controller="Categories" asp-action="Create" class="inline-flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-300 hover:bg-admin-50 hover:text-admin-700" aria-label="إضافة قسم جديد">
+                        <span>إضافة قسم</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+                        </svg>
+                    </a>
+                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Orders" class="inline-flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-300 hover:bg-admin-50 hover:text-admin-700" aria-label="إدارة الطلبات">
+                        <span>إدارة الطلبات</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8m-8 4h6m-8 8h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8L4 7v10a2 2 0 0 0 2 2Z" />
+                        </svg>
+                    </a>
+                    <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="inline-flex items-center justify-between rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-admin-300 hover:bg-admin-50 hover:text-admin-700" aria-label="إدارة المستخدمين">
+                        <span>إدارة المستخدمين</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0ZM3 20a7 7 0 0 1 14 0M17 8h4m-2-2v4" />
+                        </svg>
+                    </a>
+                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Offers" class="inline-flex items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500 transition hover:border-admin-300 hover:text-admin-700" aria-label="الكوبونات والعروض">
+                        <span>كوبونات/عروض</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 9V7a2 2 0 1 1 4 0v2m-6 1h12v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9Z" />
+                        </svg>
+                    </a>
+                </div>
+            </article>
 
-        <article class="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
-            <p class="text-xs font-bold tracking-[0.2em] text-rose-700">محظور</p>
-            <p class="mt-3 text-3xl font-extrabold text-rose-800">@blockedCount</p>
-            <p class="mt-1 text-sm text-rose-700">مستخدم محظور</p>
-        </article>
+            <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="text-base font-extrabold text-admin-800">تنبيهات ذكية</h2>
+                    <span class="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">متابعة فورية</span>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <p class="text-xs font-bold text-amber-700">طلبات متأخرة</p>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="admin-stat-number text-xl font-extrabold text-amber-800">@FormatInt(Model.DelayedOrdersCount)</span>
+                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Orders" class="admin-action-btn rounded-lg border border-amber-300 px-2 py-1 text-xs font-bold text-amber-800 transition hover:bg-amber-100" title="فتح الطلبات المتأخرة" aria-label="فتح الطلبات المتأخرة">فتح</a>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-sky-200 bg-sky-50 p-3">
+                        <p class="text-xs font-bold text-sky-700">مرتجعات / شكاوى</p>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="admin-stat-number text-xl font-extrabold text-sky-800">@FormatInt(Model.ComplaintsCount)</span>
+                            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Orders" class="admin-action-btn rounded-lg border border-sky-300 px-2 py-1 text-xs font-bold text-sky-800 transition hover:bg-sky-100" title="فتح الشكاوى" aria-label="فتح الشكاوى">فتح</a>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-rose-200 bg-rose-50 p-3">
+                        <p class="text-xs font-bold text-rose-700">الأعضاء غير المفعلين</p>
+                        <div class="mt-1 flex items-center justify-between">
+                            <span class="admin-stat-number text-xl font-extrabold text-rose-800">@FormatInt(inactiveMembers)</span>
+                            <a asp-area="Admin" asp-controller="Users" asp-action="Members" class="admin-action-btn rounded-lg border border-rose-300 px-2 py-1 text-xs font-bold text-rose-800 transition hover:bg-rose-100" title="فتح الأعضاء غير المفعلين" aria-label="فتح الأعضاء غير المفعلين">فتح</a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+        </div>
     </div>
 </section>

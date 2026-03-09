@@ -2,89 +2,109 @@
 @{
     ViewData["Title"] = "عربة التسوق";
     var total = Model.Sum(x => x.Total);
+    var totalItems = Model.Sum(x => x.Quantity);
 }
 
 <section class="space-y-6">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <h1 class="text-3xl font-extrabold text-slate-900">عربة التسوق</h1>
-        <p class="mt-3 text-sm text-slate-600">راجع منتجاتك، عدّل الكميات، وبعدها ادفع أونلاين عبر Stripe.</p>
+    <div class="member-surface rounded-3xl p-6 sm:p-8">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 sm:text-3xl">عربة التسوق</h1>
+                <p class="mt-2 text-sm text-slate-600">راجع المنتجات، عدل الكميات، ثم أكمل الدفع الإلكتروني.</p>
+            </div>
+            <div class="flex gap-2">
+                <span class="member-chip">عدد المنتجات: <span class="member-stat-number">@Model.Count</span></span>
+                <span class="member-chip">عدد القطع: <span class="member-stat-number">@totalItems</span></span>
+            </div>
+        </div>
     </div>
-
-    @if (TempData["StoreSuccess"] is string okMsg)
-    {
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">@okMsg</div>
-    }
-
-    @if (TempData["StoreError"] is string errMsg)
-    {
-        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">@errMsg</div>
-    }
 
     @if (Model.Count == 0)
     {
-        <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            العربة فارغة حاليا.
-            <a asp-area="Member" asp-controller="Home" asp-action="Index" class="font-bold text-brand-700 hover:text-brand-900">تصفح المنتجات</a>
+        <div class="member-grid-empty px-6 py-10 text-center text-slate-500">
+            <p class="text-sm font-semibold">العربة فارغة حالياً.</p>
+            <a asp-area="Member" asp-controller="Home" asp-action="Index" class="mt-2 inline-block text-sm font-bold text-brand-700 transition hover:text-brand-900">تصفح المنتجات الآن</a>
         </div>
     }
     else
     {
-        <div class="space-y-3">
-            @foreach (var item in Model)
-            {
-                <article class="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div class="h-20 w-20 overflow-hidden rounded-xl bg-slate-100">
-                        @if (!string.IsNullOrWhiteSpace(item.ImagePath))
-                        {
-                            <img src="@item.ImagePath" alt="@item.Name" class="h-full w-full object-cover" />
-                        }
-                        else
-                        {
-                            <div class="flex h-full items-center justify-center text-xs font-semibold text-slate-400">No Image</div>
-                        }
+        <div class="grid gap-4 xl:grid-cols-[1fr_330px]">
+            <div class="space-y-3">
+                @foreach (var item in Model)
+                {
+                    <article class="member-surface grid gap-3 rounded-2xl p-3 sm:grid-cols-[96px_1fr_auto] sm:items-center sm:gap-4 sm:p-4">
+                        <div class="h-24 w-24 overflow-hidden rounded-xl bg-slate-100">
+                            @if (!string.IsNullOrWhiteSpace(item.ImagePath))
+                            {
+                                <img src="@item.ImagePath" alt="@item.Name" class="h-full w-full object-cover" />
+                            }
+                            else
+                            {
+                                <div class="flex h-full items-center justify-center text-xs font-semibold text-slate-400">لا توجد صورة</div>
+                            }
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold text-brand-700">@item.CategoryName</p>
+                            <h2 class="mt-1 text-base font-extrabold text-slate-900">@item.Name</h2>
+                            <p class="mt-1 text-sm text-slate-600">سعر القطعة: <span class="member-stat-number">@item.UnitPrice.ToString("0.00")</span> EGP</p>
+
+                            <div class="mt-3 flex items-center gap-2">
+                                <form asp-area="Member" asp-controller="Home" asp-action="DecreaseQuantity" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <button type="submit" class="member-btn-outline flex h-8 w-8 items-center justify-center text-base">-</button>
+                                </form>
+
+                                <span class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-extrabold text-slate-800">
+                                    <span class="member-stat-number">@item.Quantity</span>
+                                </span>
+
+                                <form asp-area="Member" asp-controller="Home" asp-action="IncreaseQuantity" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <button type="submit" class="member-btn-outline flex h-8 w-8 items-center justify-center text-base">+</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
+                            <p class="text-sm font-black text-slate-800"><span class="member-stat-number">@item.Total.ToString("0.00")</span> EGP</p>
+                            <form asp-area="Member" asp-controller="Home" asp-action="RemoveFromCart" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="productId" value="@item.ProductId" />
+                                <button type="submit" class="member-btn-danger px-3 py-1.5 text-xs">إزالة</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <aside class="member-surface h-fit rounded-2xl p-5 xl:sticky xl:top-24">
+                <h3 class="text-lg font-extrabold text-slate-900">ملخص الطلب</h3>
+                <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>عدد المنتجات</span>
+                        <span class="member-stat-number font-bold text-slate-800">@Model.Count</span>
                     </div>
-
-                    <div class="min-w-[180px] flex-1">
-                        <p class="text-xs font-bold text-brand-700">@item.CategoryName</p>
-                        <h2 class="text-lg font-extrabold text-slate-900">@item.Name</h2>
-                        <p class="text-sm text-slate-600">سعر القطعة: @item.UnitPrice.ToString("0.00") EGP</p>
+                    <div class="flex items-center justify-between text-slate-600">
+                        <span>عدد القطع</span>
+                        <span class="member-stat-number font-bold text-slate-800">@totalItems</span>
                     </div>
+                </div>
 
-                    <div class="flex items-center gap-2">
-                        <form asp-area="Member" asp-controller="Home" asp-action="DecreaseQuantity" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="productId" value="@item.ProductId" />
-                            <button type="submit" class="h-9 w-9 rounded-lg border border-slate-300 text-lg font-extrabold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">-</button>
-                        </form>
+                <div class="mt-4 rounded-xl bg-sky-50 p-3 text-center">
+                    <p class="text-xs font-bold text-slate-500">الإجمالي النهائي</p>
+                    <p class="mt-1 text-2xl font-black text-brand-700"><span class="member-stat-number">@total.ToString("0.00")</span> EGP</p>
+                </div>
 
-                        <span class="min-w-10 rounded-lg bg-slate-100 px-3 py-2 text-center text-sm font-bold text-slate-800">@item.Quantity</span>
+                <form asp-area="Member" asp-controller="Home" asp-action="Checkout" method="post" class="mt-4">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="member-btn-primary w-full px-4 py-3 text-sm">الدفع الآن عبر Stripe</button>
+                </form>
 
-                        <form asp-area="Member" asp-controller="Home" asp-action="IncreaseQuantity" method="post">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="productId" value="@item.ProductId" />
-                            <button type="submit" class="h-9 w-9 rounded-lg border border-slate-300 text-lg font-extrabold text-slate-700 transition hover:border-brand-500 hover:text-brand-700">+</button>
-                        </form>
-                    </div>
-
-                    <p class="min-w-[120px] text-sm font-bold text-slate-800">@item.Total.ToString("0.00") EGP</p>
-
-                    <form asp-area="Member" asp-controller="Home" asp-action="RemoveFromCart" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="productId" value="@item.ProductId" />
-                        <button type="submit" class="rounded-xl border border-rose-300 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50">إزالة</button>
-                    </form>
-                </article>
-            }
-        </div>
-
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-600">الإجمالي</p>
-            <p class="mt-1 text-2xl font-extrabold text-slate-900">@total.ToString("0.00") EGP</p>
-
-            <form asp-area="Member" asp-controller="Home" asp-action="Checkout" method="post" class="mt-4">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700">الدفع الآن عبر Stripe</button>
-            </form>
+                <a asp-area="Member" asp-controller="Home" asp-action="Index" class="member-btn-outline mt-2 flex w-full items-center justify-center px-4 py-2.5 text-sm">العودة للتسوق</a>
+            </aside>
         </div>
     }
 </section>

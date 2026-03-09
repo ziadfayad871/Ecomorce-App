@@ -1,91 +1,800 @@
-﻿@model List<DataAccess.Models.Entities.Product>
+@model List<Core.Domain.Entities.Product>
+@using System.Text.Json
 @using Task.Areas.Member.ViewModels
 @{
-    ViewData["Title"] = "متجر الملابس";
+    ViewData["Title"] = "تسوّق";
+
     var categories = ViewBag.Categories as List<StoreCategoryFilterVm> ?? new List<StoreCategoryFilterVm>();
     int? selectedCategoryId = ViewBag.SelectedCategoryId as int?;
+    var selectedCategoryIdText = selectedCategoryId?.ToString() ?? "";
     var selectedCategoryName = ViewBag.SelectedCategoryName as string ?? "كل المنتجات";
+    var currentPage = ViewBag.CurrentPage is int cp ? cp : 1;
+    var totalPages = ViewBag.TotalPages is int tp ? tp : 1;
+    var pageSize = ViewBag.PageSize is int ps ? ps : 8;
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
+    var favoriteProductIds = ViewBag.FavoriteProductIds as HashSet<int> ?? new HashSet<int>();
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
-<section class="space-y-8">
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <p class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">CLOTHING STORE</p>
-        <h1 class="mt-4 text-3xl font-extrabold text-slate-900">أحدث تشكيلات الملابس</h1>
-        <p class="mt-3 text-sm leading-7 text-slate-600">تصفح كل المنتجات أو فلتر حسب القسم (رجالي، حريمي، أطفال...).</p>
+<form id="ajaxAntiForgeryTemplate" class="hidden">@Html.AntiForgeryToken()</form>
 
-        <div class="mt-5 flex flex-wrap gap-3">
-            <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="rounded-xl bg-brand-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-brand-900">افتح العربة</a>
-            <a asp-area="" asp-controller="Account" asp-action="Register" class="rounded-xl border border-brand-300 bg-brand-50 px-4 py-2 text-sm font-bold text-brand-700 transition hover:border-brand-500 hover:bg-brand-100">تسجيل مستخدم جديد</a>
+<section id="page-header" class="hero-showcase member-surface overflow-hidden rounded-3xl p-4 sm:p-6">
+    <div class="grid gap-6 lg:grid-cols-[1.05fr_1fr] lg:items-center">
+        <div class="order-2 lg:order-1">
+            <span class="inline-flex items-center rounded-full bg-white/70 px-4 py-1 text-xs font-black text-[#0369a1]">اناقة بلس</span>
+            <h1 class="mt-4 text-3xl font-black leading-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                ستايل يومي
+                <span class="block text-[#0369a1]">مريح وشيك</span>
+            </h1>
+            <p class="mt-4 max-w-xl text-sm leading-8 text-slate-600 sm:text-base">
+                اكتشف تشكيلتنا الجديدة من القطع الأساسية بخامات ناعمة ومقاسات مناسبة للجميع.
+                اختار اللوك اللي يناسب يومك واستمتع بتجربة تسوق أسرع وأسهل.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="#product1" class="member-btn-primary rounded-xl px-6 py-3 text-sm">ابدأ التسوق</a>
+                <a asp-area="Member" asp-controller="Home" asp-action="Cart" class="member-btn-outline rounded-xl px-6 py-3 text-sm">عرض العربة</a>
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-2">
+                <span class="member-chip">خامات مريحة</span>
+                <span class="member-chip">ألوان عملية</span>
+                <span class="member-chip">توصيل سريع</span>
+            </div>
         </div>
-    </div>
 
-    @if (TempData["StoreSuccess"] is string okMsg)
-    {
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">@okMsg</div>
-    }
-
-    @if (TempData["StoreError"] is string errMsg)
-    {
-        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">@errMsg</div>
-    }
-
-    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p class="mb-3 text-sm font-bold text-slate-700">الأقسام</p>
-        <div class="flex flex-wrap gap-2">
-            <a asp-area="Member" asp-controller="Home" asp-action="Index" class="rounded-full px-4 py-2 text-sm font-bold transition @(selectedCategoryId == null ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")">الكل</a>
-
-            @foreach (var c in categories)
-            {
-                <a asp-area="Member" asp-controller="Home" asp-action="Index" asp-route-categoryId="@c.Id" class="rounded-full px-4 py-2 text-sm font-bold transition @(selectedCategoryId == c.Id ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200")">
-                    @c.Name (@c.Count)
-                </a>
-            }
-        </div>
-    </div>
-
-    <div>
-        <h2 class="mb-4 text-xl font-extrabold text-slate-900">@selectedCategoryName</h2>
-        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            @if (Model.Count == 0)
-            {
-                <div class="col-span-full rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-                    لا توجد منتجات في هذا القسم حاليا.
-                </div>
-            }
-            else
-            {
-                @foreach (var p in Model)
-                {
-                    var image = p.Images.FirstOrDefault()?.Path;
-                    <article class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <div class="aspect-[3/4] w-full overflow-hidden bg-slate-100">
-                            @if (!string.IsNullOrWhiteSpace(image))
-                            {
-                                <img src="@image" alt="@p.Name" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                            }
-                            else
-                            {
-                                <div class="flex h-full items-center justify-center text-sm font-semibold text-slate-400">No Image</div>
-                            }
-                        </div>
-
-                        <div class="space-y-3 p-4">
-                            <div>
-                                <p class="text-xs font-bold text-brand-700">@(p.Category?.Name ?? "Clothing")</p>
-                                <h2 class="mt-1 text-lg font-extrabold text-slate-900">@p.Name</h2>
-                                <p class="mt-1 text-sm font-bold text-slate-700">@p.Price.ToString("0.00") EGP</p>
-                            </div>
-
-                            <form asp-area="Member" asp-controller="Home" asp-action="AddToCart" method="post" class="flex items-center gap-2">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="productId" value="@p.Id" />
-                                <input type="hidden" name="returnUrl" value="@($"{Context.Request.Path}{Context.Request.QueryString}")" />
-                                <button type="submit" class="w-full rounded-xl bg-brand-700 px-3 py-2 text-sm font-bold text-white transition hover:bg-brand-900">أضف للعربة</button>
-                            </form>
-                        </div>
-                    </article>
-                }
-            }
+        <div class="order-1 lg:order-2 hero-image-wrap">
+            <img src="~/img/hero-anaka-plus.webp" alt="موديلز يرتدون سويت شيرت كحلي" class="hero-image" />
         </div>
     </div>
 </section>
+
+<div class="modal-overlay" id="quickViewModal">
+    <div class="quick-view-modal animate-modal">
+        <div class="modal-header">
+            <h3 class="modal-title" id="quickViewProductName"></h3>
+            <button class="close-modal" type="button" onclick="hideQuickViewModal()">×</button>
+        </div>
+        <div class="quick-view-content">
+            <div class="quick-view-image">
+                <img id="quickViewProductImage" src="" alt="صورة المنتج">
+            </div>
+            <div class="quick-view-details">
+                <div class="quick-view-rating" id="quickViewRating"></div>
+                <h4 class="quick-view-price" id="quickViewPrice"></h4>
+                <p class="quick-view-description" id="quickViewDescription"></p>
+                <div class="quick-view-colors">
+                    <span class="color-label">اللون:</span>
+                    <span id="quickViewColorText"></span>
+                </div>
+                <div class="quick-view-sizes">
+                    <span class="size-label">المقاس:</span>
+                    <div class="size-options" id="quickViewSizes"></div>
+                </div>
+                <div class="quick-view-actions">
+                    <div class="quantity-selector">
+                        <span class="quantity-label">الكمية:</span>
+                        <div class="quantity-controls">
+                            <button class="quantity-btn" id="quickViewDecrementQty" type="button">-</button>
+                            <input type="number" id="quickViewQuantityInput" class="quantity-input" value="1" min="1" max="10">
+                            <button class="quantity-btn" id="quickViewIncrementQty" type="button">+</button>
+                        </div>
+                    </div>
+                    <button class="modal-button confirm-button" id="quickViewAddToCart" type="button">أضف إلى العربة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="sizeModal">
+    <div class="size-modal">
+        <div class="modal-header">
+            <h3 class="modal-title">اختر المقاس والكمية</h3>
+            <button class="close-modal" type="button" onclick="hideSizeModal()">×</button>
+        </div>
+        <div class="size-options" id="sizeOptionsContainer"></div>
+        <div class="quantity-selector">
+            <span class="quantity-label">الكمية:</span>
+            <div class="quantity-controls">
+                <button class="quantity-btn" id="decrementQty" type="button">-</button>
+                <input type="number" id="quantityInput" class="quantity-input" value="1" min="1" max="10">
+                <button class="quantity-btn" id="incrementQty" type="button">+</button>
+            </div>
+        </div>
+        <div class="stock-info" id="stockInfo"></div>
+        <div class="modal-actions">
+            <button class="modal-button cancel-button" type="button" onclick="hideSizeModal()">إلغاء</button>
+            <button class="modal-button confirm-button" id="confirmAddToCart" type="button" disabled>أضف إلى العربة</button>
+        </div>
+    </div>
+</div>
+
+<section id="product1" class="member-surface section-p1 mt-6 rounded-3xl p-5 sm:p-7">
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-gray-800">كل المنتجات</h2>
+            <p class="text-gray-600 mt-2">@selectedCategoryName</p>
+        </div>
+        <div class="w-full md:w-80">
+            <input id="shopSearchInput" type="search" class="store-search-input w-full" placeholder="ابحث عن منتج..." value="@searchTerm" />
+        </div>
+    </div>
+
+    <div class="filter-container">
+        <div class="filter-options" id="categoryFilterOptions">
+            <button class="filter-btn @(selectedCategoryId == null ? "active" : "")" data-category-id="" data-category="">كل المنتجات</button>
+            @foreach (var category in categories)
+            {
+                <button class="filter-btn @(selectedCategoryId == category.Id ? "active" : "")"
+                        data-category-id="@category.Id"
+                        data-category="@category.Name">
+                    @category.Name
+                </button>
+            }
+        </div>
+    </div>
+
+    <div id="productContainer" class="pro-container mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        @foreach (var product in Model)
+        {
+            var image = product.Images.FirstOrDefault()?.Path ?? "";
+            var rating = (product.Id % 5) + 1;
+            var categoryName = product.Category?.Name ?? "أناقة بلس";
+            var isFeatured = product.Id % 2 == 0;
+            var isTracked = favoriteProductIds.Contains(product.Id);
+
+            <div class="pro group cursor-pointer relative" data-product-id="@product.Id">
+                <div class="relative overflow-hidden rounded-2xl">
+                    <img src="@image" alt="@product.Name" class="product-img w-full h-56 object-cover transition-transform duration-700 group-hover:scale-110">
+                    @if (isFeatured)
+                    {
+                        <span class="absolute top-2 left-2 bg-[#0369a1] text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">مميز</span>
+                    }
+                    <div class="icon-overlay">
+                        <button class="quick-view-btn" type="button" data-product-id="@product.Id" data-tooltip="عرض سريع">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="favorite-toggle-btn @(isTracked ? "is-tracked" : "")" type="button" data-product-id="@product.Id" data-is-tracked="@isTracked.ToString().ToLowerInvariant()" aria-pressed="@isTracked.ToString().ToLowerInvariant()" data-tooltip="@(isTracked ? "إلغاء المتابعة" : "متابعة المنتج")">
+                            <i class="@(isTracked ? "fas" : "far") fa-heart"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="des p-4">
+                    <span class="product-brand">@categoryName</span>
+                    <h5 class="product-description">@product.Name</h5>
+                    <div class="star">
+                        @for (var i = 0; i < 5; i++)
+                        {
+                            if (i < rating)
+                            {
+                                <i class="fas fa-star"></i>
+                            }
+                            else
+                            {
+                                <i class="far fa-star"></i>
+                            }
+                        }
+                    </div>
+                    <h4 class="product-price">@product.Price.ToString("0.00") ج.م</h4>
+                </div>
+                <div class="pro-cart-button" data-product-id="@product.Id" title="أضف إلى العربة">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <form class="add-to-cart-form" data-product-id="@product.Id" style="display: none;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="productId" value="@product.Id" />
+                    <input type="hidden" name="quantity" id="quantity-@product.Id" value="1" />
+                    <input type="hidden" name="size" id="size-@product.Id" value="" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                </form>
+            </div>
+        }
+    </div>
+
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+    </div>
+</section>
+
+<section id="pagination" class="section-p1"></section>
+
+<section id="newsletter" class="store-newsletter mt-6">
+    <div class="newstext">
+        <h4 class="text-2xl font-black text-slate-900">اشترك في النشرة البريدية</h4>
+        <p class="mt-2 text-slate-600">احصل على جديد المتجر و <span class="text-[#0369a1] font-bold">العروض الخاصة</span></p>
+    </div>
+    <div class="form mt-4 flex flex-col sm:flex-row gap-2">
+        <input id="newsletterEmail" type="email" class="store-newsletter-input" placeholder="البريد الإلكتروني" />
+        <button id="newsletterBtn" type="button" class="member-btn-primary px-5 py-2.5 text-sm">اشتراك</button>
+    </div>
+</section>
+
+<button class="back-to-top" title="الرجوع لأعلى" type="button">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+@section Scripts {
+<script>
+    const pageSize = @pageSize;
+    let currentPage = @currentPage;
+    let totalPages = @totalPages;
+    let currentCategoryId = @Html.Raw(JsonSerializer.Serialize(selectedCategoryIdText));
+    let currentSearchTerm = @Html.Raw(JsonSerializer.Serialize(searchTerm));
+
+    let currentProductId = null;
+    let selectedSize = null;
+    let selectedQuickViewSize = null;
+    let maxQuantity = 10;
+
+    const antiForgeryToken = document.querySelector('#ajaxAntiForgeryTemplate input[name="__RequestVerificationToken"]')?.value || '';
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function starsHtml(rating) {
+        const safeRating = Math.max(0, Math.min(5, Number(rating || 0)));
+        let html = '';
+        for (let i = 0; i < 5; i++) {
+            html += i < safeRating ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+        }
+        return html;
+    }
+
+    function createProductCardHtml(product) {
+        const productId = Number(product.productId || 0);
+        const name = escapeHtml(product.productName || 'منتج');
+        const brand = escapeHtml(product.brandName || 'أناقة بلس');
+        const price = Number(product.productPrice || 0).toFixed(2);
+        const img = escapeHtml(product.imgUrl || '');
+        const rating = Number(product.productRating || 0);
+        const isFeatured = !!product.isFeatured;
+        const isTracked = !!product.isTracked;
+        const featuredBadge = isFeatured
+            ? '<span class="absolute top-2 left-2 bg-[#0369a1] text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">مميز</span>'
+            : '';
+        const favoriteButton = `
+            <button class="favorite-toggle-btn ${isTracked ? 'is-tracked' : ''}" type="button" data-product-id="${productId}" data-is-tracked="${isTracked}" aria-pressed="${isTracked}" data-tooltip="${isTracked ? 'إلغاء المتابعة' : 'متابعة المنتج'}">
+                <i class="${isTracked ? 'fas' : 'far'} fa-heart"></i>
+            </button>
+        `;
+
+        return `
+            <div class="pro group cursor-pointer relative" data-product-id="${productId}">
+                <div class="relative overflow-hidden rounded-2xl">
+                    <img src="${img}" alt="${name}" class="product-img w-full h-56 object-cover transition-transform duration-700 group-hover:scale-110">
+                    ${featuredBadge}
+                    <div class="icon-overlay">
+                        <button class="quick-view-btn" type="button" data-product-id="${productId}" data-tooltip="عرض سريع">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${favoriteButton}
+                    </div>
+                </div>
+                <div class="des p-4">
+                    <span class="product-brand">${brand}</span>
+                    <h5 class="product-description">${name}</h5>
+                    <div class="star">${starsHtml(rating)}</div>
+                    <h4 class="product-price">${price} ج.م</h4>
+                </div>
+                <div class="pro-cart-button" data-product-id="${productId}" title="أضف إلى العربة">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <form class="add-to-cart-form" data-product-id="${productId}" style="display: none;">
+                    <input type="hidden" name="__RequestVerificationToken" value="${antiForgeryToken}" />
+                    <input type="hidden" name="productId" value="${productId}" />
+                    <input type="hidden" name="quantity" id="quantity-${productId}" value="1" />
+                    <input type="hidden" name="size" id="size-${productId}" value="" />
+                    <input type="hidden" name="returnUrl" value="${escapeHtml(window.location.pathname + window.location.search)}" />
+                </form>
+            </div>
+        `;
+    }
+
+    function renderPagination() {
+        const paginationContainer = document.getElementById('pagination');
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prevLink = document.createElement('a');
+        prevLink.innerHTML = '<i class="fas fa-long-arrow-alt-right"></i>';
+        prevLink.className = currentPage === 1 ? 'disabled' : '';
+        prevLink.href = '#';
+        prevLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage > 1) loadPage(currentPage - 1);
+        });
+        paginationContainer.appendChild(prevLink);
+
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        if (startPage > 1) {
+            const first = document.createElement('a');
+            first.href = '#';
+            first.textContent = '1';
+            first.className = currentPage === 1 ? 'active' : '';
+            first.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadPage(1);
+            });
+            paginationContainer.appendChild(first);
+
+            if (startPage > 2) {
+                const ellipsis = document.createElement('span');
+                ellipsis.textContent = '...';
+                ellipsis.style.padding = '0 10px';
+                paginationContainer.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.textContent = i;
+            link.className = i === currentPage ? 'active' : '';
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadPage(i);
+            });
+            paginationContainer.appendChild(link);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.textContent = '...';
+                ellipsis.style.padding = '0 10px';
+                paginationContainer.appendChild(ellipsis);
+            }
+
+            const last = document.createElement('a');
+            last.href = '#';
+            last.textContent = totalPages;
+            last.className = currentPage === totalPages ? 'active' : '';
+            last.addEventListener('click', (e) => {
+                e.preventDefault();
+                loadPage(totalPages);
+            });
+            paginationContainer.appendChild(last);
+        }
+
+        const nextLink = document.createElement('a');
+        nextLink.innerHTML = '<i class="fas fa-long-arrow-alt-left"></i>';
+        nextLink.className = currentPage === totalPages ? 'disabled' : '';
+        nextLink.href = '#';
+        nextLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentPage < totalPages) loadPage(currentPage + 1);
+        });
+        paginationContainer.appendChild(nextLink);
+    }
+
+    function attachDynamicListeners() {
+        document.querySelectorAll('.pro-cart-button').forEach(button => {
+            button.onclick = function (e) {
+                e.stopPropagation();
+                const productId = this.getAttribute('data-product-id');
+                if (productId) showSizeModal(productId);
+            };
+        });
+
+        document.querySelectorAll('.quick-view-btn').forEach(button => {
+            button.onclick = function (e) {
+                e.stopPropagation();
+                const productId = this.getAttribute('data-product-id');
+                if (productId) showQuickViewModal(productId);
+            };
+        });
+
+        document.querySelectorAll('.favorite-toggle-btn').forEach(button => {
+            button.onclick = async function (e) {
+                e.stopPropagation();
+                const productId = this.getAttribute('data-product-id');
+                if (!productId || !window.memberStore) return;
+
+                const result = await window.memberStore.toggleFavorite(productId, window.location.pathname + window.location.search);
+                if (!result) return;
+
+                if (result.requiresLogin && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                    return;
+                }
+
+                if (!result.success) {
+                    showNotification(false, result.message || 'تعذر تحديث المتابعة');
+                    return;
+                }
+
+                window.memberStore.setFavoriteButtonState(this, result.isTracked);
+                showNotification(true, result.message || 'تم تحديث المتابعة');
+            };
+        });
+    }
+
+    function loadPage(page) {
+        const productContainer = document.getElementById('productContainer');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        let safePage = Math.max(1, Number(page || 1));
+        if (totalPages > 0) safePage = Math.min(safePage, totalPages);
+
+        loadingSpinner?.classList.add('active');
+        if (productContainer) productContainer.style.opacity = '0.5';
+
+        let url = `/Member/Home/Index?page=${safePage}&pageSize=${pageSize}`;
+        if (currentCategoryId) {
+            url += `&categoryId=${encodeURIComponent(currentCategoryId)}`;
+        }
+        if (currentSearchTerm && currentSearchTerm.trim().length > 0) {
+            url += `&searchTerm=${encodeURIComponent(currentSearchTerm.trim())}`;
+        }
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('فشل تحميل المنتجات');
+            return response.json();
+        })
+        .then(data => {
+            const products = Array.isArray(data.products) ? data.products : [];
+            if (productContainer) {
+                if (products.length === 0) {
+                    productContainer.innerHTML = `
+                        <div class="member-grid-empty col-span-full px-6 py-10 text-center">
+                            لا توجد منتجات مطابقة حالياً.
+                        </div>
+                    `;
+                } else {
+                    productContainer.innerHTML = products.map(createProductCardHtml).join('');
+                }
+            }
+
+            currentPage = Number(data.currentPage || 1);
+            totalPages = Number(data.totalPages || 1);
+            renderPagination();
+            attachDynamicListeners();
+        })
+        .catch(error => {
+            console.error(error);
+            showNotification(false, 'تعذّر تحميل المنتجات. حاول مرة أخرى.');
+        })
+        .finally(() => {
+            loadingSpinner?.classList.remove('active');
+            if (productContainer) productContainer.style.opacity = '1';
+        });
+    }
+
+    function updateCartCount(count) {
+        document.querySelectorAll('.js-cart-count').forEach(el => {
+            el.textContent = Number(count || 0);
+        });
+    }
+
+    function hideSizeModal() {
+        document.getElementById('sizeModal')?.classList.remove('active');
+    }
+
+    function showSizeModal(productId) {
+        currentProductId = productId;
+        selectedSize = null;
+        maxQuantity = 10;
+
+        const quantityInput = document.getElementById('quantityInput');
+        const stockInfo = document.getElementById('stockInfo');
+        const confirmBtn = document.getElementById('confirmAddToCart');
+        const sizeOptionsContainer = document.getElementById('sizeOptionsContainer');
+
+        if (quantityInput) quantityInput.value = '1';
+        if (confirmBtn) confirmBtn.disabled = true;
+        if (stockInfo) stockInfo.textContent = '';
+        if (sizeOptionsContainer) sizeOptionsContainer.innerHTML = '<p>جارٍ تحميل المقاسات...</p>';
+
+        document.getElementById('sizeModal')?.classList.add('active');
+
+        fetch(`/Member/Home/GetProductSizes?productId=${encodeURIComponent(productId)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateSizeOptions(data.sizes || []);
+                } else if (sizeOptionsContainer) {
+                    sizeOptionsContainer.innerHTML = `<p>${escapeHtml(data.message || 'لا توجد مقاسات متاحة')}</p>`;
+                }
+            })
+            .catch(() => {
+                if (sizeOptionsContainer) {
+                    sizeOptionsContainer.innerHTML = '<p>حدث خطأ أثناء تحميل المقاسات</p>';
+                }
+            });
+    }
+
+    function updateSizeOptions(availableSizes) {
+        const sizeOptionsContainer = document.getElementById('sizeOptionsContainer');
+        const confirmBtn = document.getElementById('confirmAddToCart');
+        const stockInfo = document.getElementById('stockInfo');
+        const quantityInput = document.getElementById('quantityInput');
+
+        if (!sizeOptionsContainer) return;
+        sizeOptionsContainer.innerHTML = '';
+
+        if (!availableSizes || availableSizes.length === 0) {
+            sizeOptionsContainer.innerHTML = '<p>المقاسات غير متوفرة حالياً</p>';
+            return;
+        }
+
+        const allSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+        allSizes.forEach(size => {
+            const isAvailable = availableSizes.includes(size);
+            const option = document.createElement('div');
+            option.className = `size-option ${isAvailable ? '' : 'disabled'}`;
+            option.textContent = size;
+            option.dataset.size = size;
+
+            if (isAvailable) {
+                option.addEventListener('click', function () {
+                    document.querySelectorAll('#sizeOptionsContainer .size-option').forEach(el => el.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedSize = this.dataset.size || '';
+                    maxQuantity = 10;
+                    if (quantityInput) quantityInput.max = String(maxQuantity);
+                    if (confirmBtn) confirmBtn.disabled = false;
+                    if (stockInfo) stockInfo.textContent = `الحد الأقصى ${maxQuantity} قطع`;
+                });
+            }
+
+            sizeOptionsContainer.appendChild(option);
+        });
+    }
+
+    function submitAddToCart(productId, size, quantity) {
+        const form = document.querySelector(`.add-to-cart-form[data-product-id="${productId}"]`);
+        if (!form) {
+            showNotification(false, 'تعذر العثور على بيانات المنتج.');
+            return;
+        }
+
+        const sizeInput = form.querySelector('input[name="size"]');
+        const quantityInput = form.querySelector('input[name="quantity"]');
+        if (sizeInput) sizeInput.value = size || '';
+        if (quantityInput) quantityInput.value = String(quantity || 1);
+
+        const formData = new FormData(form);
+
+        fetch('/Member/Home/AddToCart', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.requiresLogin && data.redirectUrl) {
+                window.location.href = data.redirectUrl;
+                return;
+            }
+
+            showNotification(!!data.success, data.message || (data.success ? 'تمت الإضافة للعربة' : 'فشلت الإضافة'));
+            if (data.success) {
+                if (data.cartCount !== undefined) {
+                    updateCartCount(data.cartCount);
+                }
+
+                const cartButton = document.querySelector(`.pro-cart-button[data-product-id="${productId}"]`);
+                if (cartButton) {
+                    cartButton.classList.add('bounce-effect');
+                    setTimeout(() => cartButton.classList.remove('bounce-effect'), 1000);
+                }
+            }
+        })
+        .catch(() => {
+            showNotification(false, 'تعذر إضافة المنتج إلى العربة.');
+        });
+    }
+
+    function hideQuickViewModal() {
+        document.getElementById('quickViewModal')?.classList.remove('active');
+    }
+
+    function showQuickViewModal(productId) {
+        fetch(`/Member/Home/GetProductDetails?productId=${encodeURIComponent(productId)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    showNotification(false, data.message || 'تعذر تحميل بيانات المنتج');
+                    return;
+                }
+
+                const product = data.product || {};
+                document.getElementById('quickViewProductName').textContent = product.productName || 'منتج';
+                document.getElementById('quickViewProductImage').src = product.imgUrl || '';
+                document.getElementById('quickViewPrice').textContent = `${Number(product.productPrice || 0).toFixed(2)} ج.م`;
+                document.getElementById('quickViewDescription').textContent = product.description || '';
+                document.getElementById('quickViewColorText').textContent = product.color || 'غير محدد';
+                document.getElementById('quickViewRating').innerHTML = starsHtml(Number(product.productRating || 0));
+
+                const quantityInput = document.getElementById('quickViewQuantityInput');
+                if (quantityInput) quantityInput.value = '1';
+
+                const sizes = Array.isArray(product.availableSizes) ? product.availableSizes : ['M', 'L'];
+                const sizeContainer = document.getElementById('quickViewSizes');
+                if (sizeContainer) {
+                    sizeContainer.innerHTML = sizes.map(size => `<div class="size-option" data-size="${escapeHtml(size)}">${escapeHtml(size)}</div>`).join('');
+                    selectedQuickViewSize = sizes.length ? sizes[0] : null;
+
+                    const firstOption = sizeContainer.querySelector('.size-option');
+                    if (firstOption) firstOption.classList.add('selected');
+
+                    sizeContainer.querySelectorAll('.size-option').forEach(option => {
+                        option.addEventListener('click', function () {
+                            sizeContainer.querySelectorAll('.size-option').forEach(el => el.classList.remove('selected'));
+                            this.classList.add('selected');
+                            selectedQuickViewSize = this.dataset.size || null;
+                        });
+                    });
+                }
+
+                const incBtn = document.getElementById('quickViewIncrementQty');
+                const decBtn = document.getElementById('quickViewDecrementQty');
+                if (incBtn) {
+                    incBtn.onclick = () => {
+                        const value = Number(quantityInput?.value || 1);
+                        if (value < 10 && quantityInput) quantityInput.value = String(value + 1);
+                    };
+                }
+                if (decBtn) {
+                    decBtn.onclick = () => {
+                        const value = Number(quantityInput?.value || 1);
+                        if (value > 1 && quantityInput) quantityInput.value = String(value - 1);
+                    };
+                }
+
+                const addBtn = document.getElementById('quickViewAddToCart');
+                if (addBtn) {
+                    addBtn.onclick = () => {
+                        if (!selectedQuickViewSize) {
+                            showNotification(false, 'اختر المقاس أولاً');
+                            return;
+                        }
+                        const qty = Number(document.getElementById('quickViewQuantityInput').value || 1);
+                        submitAddToCart(productId, selectedQuickViewSize, qty);
+                        hideQuickViewModal();
+                    };
+                }
+
+                document.getElementById('quickViewModal')?.classList.add('active');
+            })
+            .catch(() => {
+                showNotification(false, 'تعذر تحميل بيانات المنتج');
+            });
+    }
+
+    function setupBackToTop() {
+        const button = document.querySelector('.back-to-top');
+        if (!button) return;
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 280) {
+                button.classList.add('visible');
+            } else {
+                button.classList.remove('visible');
+            }
+        });
+
+        button.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    function debounce(fn, wait) {
+        let timer;
+        return function (...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        attachDynamicListeners();
+        renderPagination();
+        setupBackToTop();
+
+        const searchInput = document.getElementById('shopSearchInput');
+        const debouncedSearch = debounce(() => loadPage(1), 250);
+
+        searchInput?.addEventListener('input', function () {
+            currentSearchTerm = this.value || '';
+            debouncedSearch();
+        });
+
+        document.addEventListener('store-search', function (event) {
+            const term = event?.detail?.term || '';
+            currentSearchTerm = term;
+            if (searchInput) searchInput.value = term;
+            loadPage(1);
+        });
+
+        document.addEventListener('store:search', function (event) {
+            const term = event?.detail?.term || '';
+            currentSearchTerm = term;
+            if (searchInput) searchInput.value = term;
+            loadPage(1);
+        });
+
+        document.querySelectorAll('#categoryFilterOptions .filter-btn').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                currentCategoryId = this.dataset.categoryId || '';
+                document.querySelectorAll('#categoryFilterOptions .filter-btn').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                loadPage(1);
+            });
+        });
+
+        document.getElementById('incrementQty')?.addEventListener('click', function () {
+            const quantityInput = document.getElementById('quantityInput');
+            const value = Number(quantityInput?.value || 1);
+            if (value < maxQuantity && quantityInput) quantityInput.value = String(value + 1);
+        });
+
+        document.getElementById('decrementQty')?.addEventListener('click', function () {
+            const quantityInput = document.getElementById('quantityInput');
+            const value = Number(quantityInput?.value || 1);
+            if (value > 1 && quantityInput) quantityInput.value = String(value - 1);
+        });
+
+        document.getElementById('quantityInput')?.addEventListener('change', function () {
+            let value = Number(this.value || 1);
+            if (Number.isNaN(value) || value < 1) value = 1;
+            if (value > maxQuantity) value = maxQuantity;
+            this.value = String(value);
+        });
+
+        document.getElementById('confirmAddToCart')?.addEventListener('click', function () {
+            if (!currentProductId || !selectedSize) {
+                showNotification(false, 'اختر المقاس أولاً');
+                return;
+            }
+
+            const quantity = Number(document.getElementById('quantityInput')?.value || 1);
+            submitAddToCart(currentProductId, selectedSize, quantity);
+            hideSizeModal();
+        });
+
+        document.getElementById('sizeModal')?.addEventListener('click', function (e) {
+            if (e.target === this) hideSizeModal();
+        });
+
+        document.getElementById('quickViewModal')?.addEventListener('click', function (e) {
+            if (e.target === this) hideQuickViewModal();
+        });
+
+        document.getElementById('newsletterBtn')?.addEventListener('click', function () {
+            const emailInput = document.getElementById('newsletterEmail');
+            const value = (emailInput?.value || '').trim();
+            if (!value) {
+                showNotification(false, 'اكتب البريد الإلكتروني أولاً');
+                return;
+            }
+
+            showNotification(true, 'تم الاشتراك بنجاح في النشرة البريدية');
+            emailInput.value = '';
+        });
+
+    });
+</script>
+}
+
+
+

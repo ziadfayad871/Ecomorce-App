@@ -1,0 +1,80 @@
+@model global::Task.Areas.Admin.ViewModels.CategoryProductsVm
+@{
+    ViewData["Title"] = $"منتجات القسم - {Model.CategoryName}";
+}
+
+<section class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div>
+            <h1 class="page-title inline-flex items-center gap-2 text-lg font-extrabold text-admin-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-admin-700" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7a2 2 0 0 1 2-2h6l2 2h4a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+                </svg>
+                منتجات القسم: @Model.CategoryName
+            </h1>
+            <p class="mt-1 text-xs font-bold text-slate-500">عدد المنتجات: <span class="admin-stat-number">@Model.Products.Count</span></p>
+        </div>
+        <div class="mr-auto flex items-center gap-2">
+            <a asp-area="Admin" asp-controller="Products" asp-action="Create" class="inline-flex items-center gap-1.5 rounded-md bg-admin-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-admin-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14m7-7H5" />
+                </svg>
+                إضافة منتج
+            </a>
+            <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 transition hover:border-admin-300 hover:text-admin-700">الرجوع للأقسام</a>
+        </div>
+        <hr class="header-divider w-full border-slate-200" />
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <table class="admin-table text-sm">
+            <thead>
+                <tr>
+                    <th class="px-3 py-3 font-bold">المنتج</th>
+                    <th class="px-3 py-3 font-bold">القسم</th>
+                    <th class="px-3 py-3 font-bold">السعر</th>
+                    <th class="px-3 py-3 font-bold">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Products.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="px-4 py-10 text-center font-semibold text-slate-500">لا توجد منتجات داخل هذا القسم حالياً.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var product in Model.Products)
+                    {
+                        var img = product.Images?.FirstOrDefault()?.Path;
+                        <tr>
+                            <td class="px-3 py-3">
+                                <div class="mx-auto flex w-fit items-center gap-2">
+                                    <div class="h-10 w-10 overflow-hidden rounded-md bg-slate-100">
+                                        @if (!string.IsNullOrWhiteSpace(img))
+                                        {
+                                            <img src="@img" alt="@product.Name" class="h-full w-full object-cover" />
+                                        }
+                                    </div>
+                                    <span class="font-semibold text-slate-800">@product.Name</span>
+                                </div>
+                            </td>
+                            <td class="px-3 py-3 text-slate-700">@Model.CategoryName</td>
+                            <td class="px-3 py-3 text-center text-slate-700">
+                                <span class="mx-auto block w-fit admin-stat-number">@product.Price.ToString("0.00") EGP</span>
+                            </td>
+                            <td class="px-3 py-3">
+                                <a asp-area="Admin" asp-controller="Products" asp-action="Edit" asp-route-id="@product.Id" class="admin-action-btn inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition" title="تعديل المنتج" aria-label="تعديل المنتج">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.862 3.487 3.65 3.65m-2.121-2.122a2.5 2.5 0 1 1 3.536 3.536L7.5 22.978 2 24l1.022-5.5L16.39 5.015Z" />
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
