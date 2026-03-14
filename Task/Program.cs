@@ -1,6 +1,7 @@
 using DataAccess.Data;
-using DataAccess.Data.Seed;
+
 using DataAccess.Extensions;
+using DataAccess.Options;
 using DataAccess.Models.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,8 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddDbContext<ApplicationDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<PasswordResetOtpOptions>(builder.Configuration.GetSection("PasswordResetOtp"));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(opt =>
 {
@@ -77,14 +80,11 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Seed Admin
+// Initialize DB
 using (var scope = app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
-    var db = services.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
-    await IdentitySeeder.SeedAsync(services);
-    await StoreSeeder.SeedAsync(services);
+    var initializer = scope.ServiceProvider.GetRequiredService<Core.Application.Common.Persistence.IDbInitializer>();
+    await initializer.InitializeAsync();
 }
 
 app.Run();

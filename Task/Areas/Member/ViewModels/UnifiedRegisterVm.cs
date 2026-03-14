@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Task.ViewModels
+namespace Task.Areas.Member.ViewModels
 {
     public class UnifiedRegisterVm
     {

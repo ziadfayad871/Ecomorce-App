@@ -242,7 +242,7 @@ public class MemberPanelService : IMemberPanelService
         };
     }
 
-    public async Task<UpdateMemberProfileResult> UpdateProfileAsync(int memberId, string fullName, string email)
+    public async Task<UpdateMemberProfileResult> UpdateProfileAsync(int memberId, string fullName, string email, string? newPassword = null)
     {
         fullName = (fullName ?? string.Empty).Trim();
         email = (email ?? string.Empty).Trim().ToLowerInvariant();
@@ -277,6 +277,12 @@ public class MemberPanelService : IMemberPanelService
 
         member.FullName = fullName;
         member.Email = email;
+
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            member.PasswordHash = DataAccess.Security.ManualHasher.Hash(newPassword);
+        }
+
         await _db.SaveChangesAsync();
 
         return new UpdateMemberProfileResult(true, "تم تحديث بيانات الحساب بنجاح.", member.Id, member.Email);

@@ -79,6 +79,12 @@ public class MemberProfileVm
     [StringLength(150)]
     public string Email { get; set; } = "";
 
+    [MinLength(6, ErrorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل")]
+    public string? NewPassword { get; set; }
+
+    [Compare(nameof(NewPassword), ErrorMessage = "كلمة المرور وتأكيدها غير متطابقين")]
+    public string? ConfirmNewPassword { get; set; }
+
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }

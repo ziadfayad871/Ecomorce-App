@@ -22,5 +22,6 @@ namespace Core.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public List<MemberFavorite> Favorites { get; set; } = new();
+        public List<MemberPasswordResetOtp> PasswordResetOtps { get; set; } = new();
     }
 }

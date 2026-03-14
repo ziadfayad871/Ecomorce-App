@@ -1,4 +1,4 @@
-﻿@model global::Task.ViewModels.UnifiedRegisterVm
+﻿@model global::Task.Areas.Member.ViewModels.UnifiedRegisterVm
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @{
     Layout = null;
@@ -51,7 +51,7 @@
 
             <form id="registerForm" asp-action="Register" method="post" class="mt-6 space-y-4">
                 <input asp-for="ReturnUrl" type="hidden" />
-                <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+                <div asp-validation-summary="All" class="[&.validation-summary-valid]:hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
 
                 <div>
                     <label asp-for="FullName" class="mb-2 block text-sm font-bold text-slate-700">الاسم</label>

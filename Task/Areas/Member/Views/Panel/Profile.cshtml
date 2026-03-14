@@ -41,6 +41,28 @@
                         <span asp-validation-for="Email" class="mt-1 block text-xs font-bold text-rose-600"></span>
                     </div>
 
+                    <div>
+                        <label asp-for="NewPassword" class="mb-2 block text-sm font-black text-slate-700">كلمة مرور جديدة (اختياري)</label>
+                        <div class="relative">
+                            <input asp-for="NewPassword" type="password" dir="ltr" class="member-profile-input pr-10" />
+                            <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 toggle-password" tabindex="-1">
+                                <i class="far fa-eye"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="NewPassword" class="mt-1 block text-xs font-bold text-rose-600"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="ConfirmNewPassword" class="mb-2 block text-sm font-black text-slate-700">تأكيد كلمة المرور</label>
+                        <div class="relative">
+                            <input asp-for="ConfirmNewPassword" type="password" dir="ltr" class="member-profile-input pr-10" />
+                            <button type="button" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 toggle-password" tabindex="-1">
+                                <i class="far fa-eye"></i>
+                            </button>
+                        </div>
+                        <span asp-validation-for="ConfirmNewPassword" class="mt-1 block text-xs font-bold text-rose-600"></span>
+                    </div>
+
                     <div class="lg:col-span-2 flex justify-end gap-3">
                         <a asp-area="Member" asp-controller="Panel" asp-action="Index" class="member-btn-outline px-5 py-3 text-sm">إلغاء</a>
                         <button type="submit" class="member-btn-primary px-6 py-3 text-sm">حفظ التعديلات</button>
@@ -53,6 +75,23 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function () {
+                const input = this.previousElementSibling;
+                const icon = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+    </script>
 }
 
 

@@ -139,6 +139,69 @@ namespace Task.Areas.Member.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View(new MemberForgotPasswordVm());
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(MemberForgotPasswordVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(vm);
+            }
+
+            var result = await _memberAuth.SendPasswordResetOtpAsync(vm.Email);
+            if (!result.Success)
+            {
+                ModelState.AddModelError(string.Empty, result.Message);
+                return View(vm);
+            }
+
+            TempData["StoreSuccess"] = result.Message;
+            return RedirectToAction(nameof(ResetPassword), new { email = vm.Email.Trim().ToLowerInvariant() });
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult ResetPassword(string? email = null)
+        {
+            return View(new MemberResetPasswordVm
+            {
+                Email = email?.Trim().ToLowerInvariant() ?? string.Empty
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(MemberResetPasswordVm vm)
+        {
+            if (!ModelState.IsValid)
+            {
+                vm.NewPassword = string.Empty;
+                vm.ConfirmNewPassword = string.Empty;
+                return View(vm);
+            }
+
+            var result = await _memberAuth.ResetPasswordWithOtpAsync(vm.Email, vm.OtpCode, vm.NewPassword);
+            if (!result.Success)
+            {
+                ModelState.AddModelError(string.Empty, result.Message);
+                vm.NewPassword = string.Empty;
+                vm.ConfirmNewPassword = string.Empty;
+                return View(vm);
+            }
+
+            TempData["StoreSuccess"] = "تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult ExternalLogin(string provider, string? returnUrl = null)

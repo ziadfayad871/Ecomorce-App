@@ -1,6 +1,7 @@
 using Core.Application.Catalog.Contracts;
 using Core.Application.Common.Activities;
 using Core.Application.Common.Persistence;
+using Core.Application.Members.Contracts;
 using Core.Domain.Entities;
 using DataAccess.Models.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -17,20 +18,20 @@ namespace Task.Areas.Admin.Controllers
     {
         private readonly IProductRepository _products;
         private readonly ICategoryRepository _categories;
-        private readonly IRepository<MemberEntity> _members;
-        private readonly IRepository<Order> _orders;
-        private readonly IRepository<OrderItem> _orderItems;
-        private readonly IRepository<Offer> _offers;
+        private readonly IMemberRepository _members;
+        private readonly IOrderRepository _orders;
+        private readonly IOrderItemRepository _orderItems;
+        private readonly IOfferRepository _offers;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAdminActivityService _activity;
 
         public DashboardController(
             IProductRepository products,
             ICategoryRepository categories,
-            IRepository<MemberEntity> members,
-            IRepository<Order> orders,
-            IRepository<OrderItem> orderItems,
-            IRepository<Offer> offers,
+            IMemberRepository members,
+            IOrderRepository orders,
+            IOrderItemRepository orderItems,
+            IOfferRepository offers,
             UserManager<ApplicationUser> userManager,
             IAdminActivityService activity)
         {

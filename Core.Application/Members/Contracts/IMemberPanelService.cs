@@ -11,5 +11,5 @@ public interface IMemberPanelService
     Task<HashSet<int>> GetFavoriteProductIdsAsync(int memberId);
     Task<ToggleFavoriteResult> ToggleFavoriteAsync(int memberId, int productId);
     Task<MemberProfileVm?> GetProfileAsync(int memberId);
-    Task<UpdateMemberProfileResult> UpdateProfileAsync(int memberId, string fullName, string email);
+    Task<UpdateMemberProfileResult> UpdateProfileAsync(int memberId, string fullName, string email, string? newPassword = null);
 }

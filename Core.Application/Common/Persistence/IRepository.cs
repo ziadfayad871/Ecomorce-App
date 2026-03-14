@@ -9,8 +9,8 @@ public interface IRepository<T> where T : class
     Task<List<T>> FindAsync(Expression<Func<T, bool>> predicate);
 
     ValueTask AddAsync(T entity);
-    void Update(T entity);
-    void Remove(T entity);
+    bool Update(T entity);
+    bool Remove(T entity);
 
     Task<int> SaveChangesAsync();
 }

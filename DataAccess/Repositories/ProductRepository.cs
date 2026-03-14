@@ -10,6 +10,18 @@ public class ProductRepository : Repository<Product>, IProductRepository
     public ProductRepository(ApplicationDbContext db) : base(db)
     {
     }
+ 
+    public override bool Update(Product entity)
+    {
+        Set.Update(entity);
+        return true;
+    }
+ 
+    public override bool Remove(Product entity)
+    {
+        Set.Remove(entity);
+        return true;
+    }
 
     public async Task<List<Product>> GetAllWithCategoryAndImagesAsync()
     {

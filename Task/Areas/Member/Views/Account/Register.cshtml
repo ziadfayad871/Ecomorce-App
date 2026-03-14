@@ -57,7 +57,7 @@
             <form asp-area="Member" asp-controller="Account" asp-action="Register" method="post" id="memberRegisterForm" class="mt-5 space-y-3">
                 @Html.AntiForgeryToken()
 
-                <div asp-validation-summary="All" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"></div>
+                <div asp-validation-summary="All" class="[&.validation-summary-valid]:hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"></div>
 
                 @if (TempData["LoginError"] is string externalError)
                 {

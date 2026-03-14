@@ -1,4 +1,4 @@
-﻿using Core.Application.Members.Contracts;
+using Core.Application.Members.Contracts;
 using Core.Application.Members.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
@@ -89,8 +89,8 @@ namespace Task.Areas.Member.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleFavorite(int productId, string? returnUrl = null)
+        [AllowAnonymous]
+        public async Task<IActionResult> ToggleFavorite([FromForm] int productId, [FromForm] string? returnUrl = null)
         {
             var memberId = GetCurrentMemberId();
             if (!memberId.HasValue)
@@ -175,7 +175,7 @@ namespace Task.Areas.Member.Controllers
                 return View(model);
             }
 
-            var result = await _memberPanelService.UpdateProfileAsync(memberId.Value, model.FullName, model.Email);
+            var result = await _memberPanelService.UpdateProfileAsync(memberId.Value, model.FullName, model.Email, model.NewPassword);
             if (!result.Success || !result.MemberId.HasValue || string.IsNullOrWhiteSpace(result.MemberEmail))
             {
                 TempData["StoreError"] = result.Message;

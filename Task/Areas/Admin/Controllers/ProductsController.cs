@@ -17,14 +17,14 @@ namespace Task.Areas.Admin.Controllers
     {
         private readonly IProductRepository _products;
         private readonly ICategoryRepository _categories;
-        private readonly IRepository<ProductImage> _images;
+        private readonly IProductImageRepository _images;
         private readonly IImageService _img;
         private readonly IAdminActivityService _activity;
 
         public ProductsController(
             IProductRepository products,
             ICategoryRepository categories,
-            IRepository<ProductImage> images,
+            IProductImageRepository images,
             IImageService img,
             IAdminActivityService activity)
         {

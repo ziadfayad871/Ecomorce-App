@@ -18,7 +18,6 @@
         <form asp-area="Admin" asp-controller="Users" asp-action="EditMember" method="post" class="space-y-4">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="CreatedAt" />
 
             <div asp-validation-summary="All" class="rounded-xl border border-admin-200 bg-admin-50 px-4 py-3 text-sm text-admin-700"></div>
 
@@ -37,15 +36,27 @@
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <p class="text-xs font-bold text-slate-500">تاريخ الإنشاء</p>
-                    <p class="admin-stat-number mt-1 text-sm font-extrabold text-slate-800">@Model.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</p>
+                <div class="flex items-center gap-3">
+                    <label class="relative inline-flex cursor-pointer items-center">
+                        <input type="checkbox" asp-for="IsActive" class="peer sr-only">
+                        <div class="peer h-6 w-11 rounded-full bg-slate-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-admin-600 peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full"></div>
+                    </label>
+                    <div>
+                        <span class="block text-sm font-bold text-slate-700">حساب مفعل</span>
+                        <span class="block text-xs text-slate-500">منح أو إلغاء صلاحية الوصول</span>
+                    </div>
                 </div>
 
-                <label class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <span class="text-sm font-bold text-slate-700">الحساب مفعّل</span>
-                    <input asp-for="IsActive" class="h-4 w-4 rounded accent-admin-600" />
-                </label>
+                <div>
+                    <label asp-for="SelectedRole" class="mb-1 block text-sm font-bold text-slate-700">الصلاحية (الدور)</label>
+                    <select asp-for="SelectedRole" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-admin-500 focus:ring-2 focus:ring-admin-100">
+                        <option value="">بدون صلاحية (عضو عادي)</option>
+                        @foreach (var role in Model.AvailableRoles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </div>
             </div>
 
             <div class="flex flex-wrap justify-center gap-3">

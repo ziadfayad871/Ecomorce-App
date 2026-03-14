@@ -36,7 +36,7 @@ namespace Task.Areas.Admin.Controllers
                 .GroupBy(x => x.CategoryId)
                 .ToDictionary(x => x.Key, x => x.Count());
 
-            return View(items);
+            return View(items.OrderByDescending(x => x.Id).ToList());
         }
 
         [HttpGet]

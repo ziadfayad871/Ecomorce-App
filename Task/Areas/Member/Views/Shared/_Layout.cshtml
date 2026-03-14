@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Http
 @using System.Linq
 @using System.Text.Json
@@ -97,6 +97,10 @@
 
     <div id="mobile-menu-backdrop" class="mobile-menu-backdrop hidden"></div>
     <div id="memberToastContainer" class="notification-container"></div>
+ 
+    <div id="ajaxAntiForgeryTemplate" class="hidden" style="display:none">
+        @Html.AntiForgeryToken()
+    </div>
 
     <nav class="tw-navbar fixed top-0 left-0 w-full z-50 shadow-lg bg-white border-b-2 border-[#0369a1]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -327,19 +331,41 @@
             const mobileSearch = document.getElementById('mobile-store-search');
             let isMenuOpen = false;
 
-            function emitStoreSearch(term) {
-                document.dispatchEvent(new CustomEvent('store-search', {
-                    detail: { term: term || '' }
-                }));
+            function emitStoreSearch(term, forceRedirect = false) {
+                const path = window.location.pathname.toLowerCase();
+                const isIndexPath = path === '/member/home/index' || path === '/member/home' || path === '/member' || path === '/';
+
+                if (forceRedirect || !isIndexPath) {
+                    if (term && term.trim().length > 0) {
+                        window.location.href = '/Member/Home/Index?searchTerm=' + encodeURIComponent(term.trim());
+                    }
+                } else {
+                    document.dispatchEvent(new CustomEvent('store-search', {
+                        detail: { term: term || '' }
+                    }));
+                }
             }
 
             function syncSearch(source, target) {
                 if (!source) return;
+                
                 source.addEventListener('input', function () {
                     if (target && target.value !== source.value) {
                         target.value = source.value;
                     }
-                    emitStoreSearch(source.value);
+                    
+                    const path = window.location.pathname.toLowerCase();
+                    const isIndexPath = path === '/member/home/index' || path === '/member/home' || path === '/member' || path === '/';
+                    
+                    if (isIndexPath) {
+                        emitStoreSearch(source.value);
+                    }
+                });
+
+                source.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        emitStoreSearch(source.value, true);
+                    }
                 });
             }
 
@@ -386,7 +412,6 @@
         (function () {
             function getToken() {
                 var tokenInput =
-                    document.querySelector('#memberFavoriteAntiForgery input[name="__RequestVerificationToken"]') ||
                     document.querySelector('#ajaxAntiForgeryTemplate input[name="__RequestVerificationToken"]') ||
                     document.querySelector('input[name="__RequestVerificationToken"]');
 
@@ -409,27 +434,37 @@
 
             async function toggleFavorite(productId, returnUrl) {
                 var token = getToken();
-                var formData = new FormData();
-                if (token) {
-                    formData.append('__RequestVerificationToken', token);
-                }
-
-                formData.append('productId', productId);
+                var params = new URLSearchParams();
+                
+                params.append('productId', productId);
                 if (returnUrl) {
-                    formData.append('returnUrl', returnUrl);
+                    params.append('returnUrl', returnUrl);
+                }
+                if (token) {
+                    params.append('__RequestVerificationToken', token);
                 }
 
                 try {
                     var response = await fetch('/Member/Panel/ToggleFavorite', {
                         method: 'POST',
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': token
                         },
-                        body: formData
+                        body: params.toString()
                     });
 
+                    if (!response.ok) {
+                        return {
+                            success: false,
+                            message: 'حدث خطأ في السيرفر (رمز ' + response.status + ').'
+                        };
+                    }
+
                     return await response.json();
-                } catch {
+                } catch (err) {
+                    console.error('ToggleFavorite error:', err);
                     return {
                         success: false,
                         message: 'تعذر الاتصال بالخادم حالياً.'

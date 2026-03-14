@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Task.ViewModels;
+using Task.Areas.Member.ViewModels;
 
 namespace Task.Controllers
 {

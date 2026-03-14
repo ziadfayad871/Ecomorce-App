@@ -5,12 +5,12 @@ using System.Linq.Expressions;
 
 namespace DataAccess.Repositories;
 
-public class Repository<T> : IRepository<T> where T : class
+public abstract class Repository<T> : IRepository<T> where T : class
 {
     protected readonly ApplicationDbContext Db;
     protected readonly DbSet<T> Set;
 
-    public Repository(ApplicationDbContext db)
+    protected Repository(ApplicationDbContext db)
     {
         Db = db;
         Set = db.Set<T>();
@@ -24,9 +24,9 @@ public class Repository<T> : IRepository<T> where T : class
 
     public async ValueTask AddAsync(T entity) => await Set.AddAsync(entity);
 
-    public void Update(T entity) => Set.Update(entity);
-
-    public void Remove(T entity) => Set.Remove(entity);
+    public abstract bool Update(T entity);
+ 
+    public abstract bool Remove(T entity);
 
     public Task<int> SaveChangesAsync() => Db.SaveChangesAsync();
 }

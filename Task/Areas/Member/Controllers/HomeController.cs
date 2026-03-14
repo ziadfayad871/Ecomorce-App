@@ -29,9 +29,9 @@ namespace Task.Areas.Member.Controllers
         private const string StripeCheckoutEndpoint = "https://api.stripe.com/v1/checkout/sessions";
 
         private readonly IProductRepository _products;
-        private readonly IRepository<OrderEntity> _orders;
-        private readonly IRepository<OrderItemEntity> _orderItems;
-        private readonly IRepository<MemberEntity> _members;
+        private readonly IOrderRepository _orders;
+        private readonly IOrderItemRepository _orderItems;
+        private readonly IMemberRepository _members;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _config;
         private readonly IAdminActivityService _activity;
@@ -41,9 +41,9 @@ namespace Task.Areas.Member.Controllers
 
         public HomeController(
             IProductRepository products,
-            IRepository<OrderEntity> orders,
-            IRepository<OrderItemEntity> orderItems,
-            IRepository<MemberEntity> members,
+            IOrderRepository orders,
+            IOrderItemRepository orderItems,
+            IMemberRepository members,
             IHttpClientFactory httpClientFactory,
             IConfiguration config,
             IAdminActivityService activity,

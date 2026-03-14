@@ -16,6 +16,7 @@ namespace DataAccess.Data
 
         //  Members table (manual hash)
         public DbSet<Member> Members => Set<Member>();
+        public DbSet<MemberPasswordResetOtp> MemberPasswordResetOtps => Set<MemberPasswordResetOtp>();
 
         // Store tables
         public DbSet<Category> Categories => Set<Category>();
@@ -25,6 +26,7 @@ namespace DataAccess.Data
         public DbSet<OrderItem> OrderItems => Set<OrderItem>();
         public DbSet<Offer> Offers => Set<Offer>();
         public DbSet<MemberFavorite> MemberFavorites => Set<MemberFavorite>();
+        public DbSet<AdminActivityLog> AdminActivityLogs => Set<AdminActivityLog>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -96,6 +98,19 @@ namespace DataAccess.Data
                 .HasOne(x => x.Product)
                 .WithMany(x => x.Favorites)
                 .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MemberPasswordResetOtp>()
+                .Property(x => x.CodeHash)
+                .HasMaxLength(512);
+
+            builder.Entity<MemberPasswordResetOtp>()
+                .HasIndex(x => new { x.MemberId, x.CreatedAtUtc });
+
+            builder.Entity<MemberPasswordResetOtp>()
+                .HasOne(x => x.Member)
+                .WithMany(x => x.PasswordResetOtps)
+                .HasForeignKey(x => x.MemberId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

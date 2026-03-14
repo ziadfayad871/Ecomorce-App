@@ -1,5 +1,6 @@
 using Core.Application.Common.Activities;
 using Core.Application.Common.Persistence;
+using Core.Application.Members.Contracts;
 using DataAccess.Models.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,13 +16,13 @@ namespace Task.Areas.Admin.Controllers
     public class UsersController : Controller
     {
         private const string AdminRole = "Admin";
-        private readonly IRepository<MemberEntity> _members;
+        private readonly IMemberRepository _members;
         private readonly UserManager<ApplicationUser> _userMgr;
         private readonly RoleManager<IdentityRole> _roleMgr;
         private readonly IAdminActivityService _activity;
 
         public UsersController(
-            IRepository<MemberEntity> members,
+            IMemberRepository members,
             UserManager<ApplicationUser> userMgr,
             RoleManager<IdentityRole> roleMgr,
             IAdminActivityService activity)
@@ -51,7 +52,7 @@ namespace Task.Areas.Admin.Controllers
             }
 
             ViewBag.SearchTerm = searchTerm?.Trim() ?? string.Empty;
-            return View(query.OrderByDescending(x => x.CreatedAt).ToList());
+            return View(query.OrderByDescending(x => x.Id).ToList());
         }
 
         [HttpGet]
@@ -148,7 +149,7 @@ namespace Task.Areas.Admin.Controllers
             }
 
             ViewBag.SearchTerm = searchTerm?.Trim() ?? string.Empty;
-            return View(regularMembers.OrderByDescending(x => x.CreatedAt).ToList());
+            return View(regularMembers.OrderByDescending(x => x.Id).ToList());
         }
 
         [HttpGet]
@@ -160,13 +161,27 @@ namespace Task.Areas.Admin.Controllers
                 return NotFound();
             }
 
+            var availableRoles = await _roleMgr.Roles
+                .Where(r => r.Name != "Member")
+                .Select(r => r.Name!)
+                .ToListAsync();
+
+            var appUser = await _userMgr.FindByEmailAsync(member.Email);
+            string? selectedRole = null;
+            if (appUser != null)
+            {
+                var userRoles = await _userMgr.GetRolesAsync(appUser);
+                selectedRole = userRoles.FirstOrDefault(r => r != "Member");
+            }
+
             return View(new MemberEditVm
             {
                 Id = member.Id,
                 FullName = member.FullName,
                 Email = member.Email,
                 IsActive = member.IsActive,
-                CreatedAt = member.CreatedAt
+                SelectedRole = selectedRole,
+                AvailableRoles = availableRoles
             });
         }
 
@@ -174,6 +189,12 @@ namespace Task.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async System.Threading.Tasks.Task<IActionResult> EditMember(MemberEditVm vm)
         {
+            var availableRoles = await _roleMgr.Roles
+                .Where(r => r.Name != "Member")
+                .Select(r => r.Name!)
+                .ToListAsync();
+            vm.AvailableRoles = availableRoles;
+
             if (!ModelState.IsValid)
             {
                 return View(vm);
@@ -198,19 +219,39 @@ namespace Task.Areas.Admin.Controllers
             }
 
             var adminUser = await _userMgr.FindByEmailAsync(normalizedEmail);
-            if (adminUser != null && await _userMgr.IsInRoleAsync(adminUser, AdminRole))
-            {
-                ModelState.AddModelError(nameof(vm.Email), "هذا البريد مرتبط بحساب مشرف.");
-                return View(vm);
-            }
 
             member.FullName = vm.FullName.Trim();
             member.Email = normalizedEmail;
             member.IsActive = vm.IsActive;
+
             _members.Update(member);
             await _members.SaveChangesAsync();
 
-            var updatedMsg = "تم تحديث بيانات العضو بنجاح.";
+            if (!string.IsNullOrWhiteSpace(vm.SelectedRole))
+            {
+                if (adminUser == null)
+                {
+                    adminUser = new ApplicationUser
+                    {
+                        UserName = normalizedEmail,
+                        Email = normalizedEmail,
+                        EmailConfirmed = true,
+                        FullName = member.FullName
+                    };
+                    await _userMgr.CreateAsync(adminUser, "Temp-Pw!234");
+                }
+
+                var currentRoles = await _userMgr.GetRolesAsync(adminUser);
+                await _userMgr.RemoveFromRolesAsync(adminUser, currentRoles);
+                await _userMgr.AddToRoleAsync(adminUser, vm.SelectedRole);
+            }
+            else if (adminUser != null)
+            {
+                var currentRoles = await _userMgr.GetRolesAsync(adminUser);
+                await _userMgr.RemoveFromRolesAsync(adminUser, currentRoles);
+            }
+
+            var updatedMsg = "تم تحديث بيانات العضو والصلاحيات بنجاح.";
             TempData["UserAction"] = updatedMsg;
             _activity.Add("المستخدمين", updatedMsg);
 

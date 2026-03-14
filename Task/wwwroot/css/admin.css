@@ -33,7 +33,7 @@
     top: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    width: min(86vw, 28rem);
+    width: min(86vw, 22rem);
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -146,7 +146,7 @@
 @media (max-width: 768px) {
     .notification-container {
         top: 1rem;
-        width: min(92vw, 28rem);
+        width: min(92vw, 22rem);
     }
 }
 
