@@ -35,3 +35,43 @@ Ecomorce App is a full-featured e-commerce platform designed to provide users wi
 ```bash
 git clone https://github.com/ziadfayad871/Ecomorce-App.git
 cd Ecomorce-App
+Install dependencies and build:
+bash
+dotnet restore
+dotnet build
+Run the application:
+bash
+dotnet run
+Open your browser and navigate to http://localhost:5000
+📁 Project Structure
+Code
+Ecomorce-App/
+├── Frontend/          # HTML and CSS files
+├── Backend/          # C# application logic
+├── Database/         # Database configurations
+��── README.md        # This file
+🎯 Key Components
+Frontend
+Clean and responsive user interface
+Optimized CSS styling
+Interactive HTML pages
+Backend
+Business logic implementation
+Database operations
+API endpoints
+📝 Usage
+[Add usage instructions here]
+
+🤝 Contributing
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+📄 License
+This project is open source and available under the MIT License.
+
+👤 Author
+Ziad Fayad
+
+GitHub: @ziadfayad871
+📞 Support
+For support, please open an issue on the GitHub repository.
+
